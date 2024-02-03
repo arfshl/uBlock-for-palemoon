@@ -37,11 +37,10 @@ const {Services} = Cu.import('resource://gre/modules/Services.jsm', null);
 
 /******************************************************************************/
 
-var vAPI = self.vAPI = self.vAPI || {};
+var vAPI = self.vAPI || {};
 vAPI.firefox = true;
 vAPI.fennec = Services.appinfo.ID === '{aa3c5121-dab2-40e2-81ca-7ea25febc110}';
 vAPI.palemoon = Services.appinfo.ID === '{8de7fcbb-c55c-4fbe-bfc5-fc555c87dbc4}';
-vAPI.thunderbird = Services.appinfo.ID === '{3550f703-e582-4d05-9a08-453d09bdfdc6}';
 
 if ( vAPI.fennec ) {
     vAPI.battery = true;
@@ -651,10 +650,9 @@ var winWatcher = (function() {
         if ( !docElement ) {
             return null;
         }
-        if ( vAPI.thunderbird ) {
-            return docElement.getAttribute('windowtype') === 'mail:3pane' ? win : null;
-        }
-        return docElement.getAttribute('windowtype') === 'navigator:browser' ||
+        var winType = docElement.getAttribute('windowtype');
+        return winType === 'mail:3pane' ||
+               winType === 'navigator:browser' ||
                docElement.getAttribute('id') === 'main-window' ?
                win : null;
     };
@@ -789,12 +787,6 @@ var getTabBrowser = (function() {
         };
     }
 
-    if ( vAPI.thunderbird ) {
-        return function(win) {
-            return win && win.document.getElementById('tabmail') || null;
-        };
-    }
-
     // https://github.com/gorhill/uBlock/issues/1004
     //   Merely READING the `gBrowser` property causes the issue -- no
     //   need to even use its returned value... This really should be fixed
@@ -808,6 +800,10 @@ var getTabBrowser = (function() {
     return function(win) {
         if ( win ) {
             var doc = win.document;
+            var tabMail = doc.getElementById('tabmail');
+            if ( tabMail ) {
+                return tabMail;
+            }
             if ( doc && doc.readyState === 'complete' ) {
                 return win.gBrowser || null;
             }
@@ -1036,23 +1032,22 @@ vAPI.tabs.open = function(details) {
         return;
     }
 
-    if ( vAPI.thunderbird ) {
-        tabBrowser.openTab('contentTab', {
+    if ( details.index === -1 ) {
+        details.index = tabBrowser.tabContainer.selectedIndex + 1;
+    }
+
+    // Thunderbird
+    if ( tabBrowser.openTab ) {
+        tab = tabBrowser.openTab('contentTab', {
             contentPage: details.url,
             background: !details.active
         });
-        // TODO: Should be possible to move tabs on Thunderbird
-        return;
+    } else {
+        tab = tabBrowser.loadOneTab(details.url, { inBackground: !details.active });
     }
-
-    if ( details.index === -1 ) {
-        details.index = tabBrowser.browsers.indexOf(tabBrowser.selectedBrowser) + 1;
-    }
-
-    tab = tabBrowser.loadOneTab(details.url, { inBackground: !details.active });
 
     if ( details.index !== undefined ) {
-        tabBrowser.moveTabTo(tab, details.index);
+        tabBrowser.moveTabTo(tab.tabNode ? tab.tabNode : tab, details.index);
     }
 };
 
@@ -1076,17 +1071,15 @@ vAPI.tabs.replace = function(tabId, url) {
 
 /******************************************************************************/
 
-vAPI.tabs._remove = (function() {
-    if ( vAPI.fennec || vAPI.thunderbird ) {
-        return function(tab, tabBrowser) {
+vAPI.tabs._remove = function(tab, tabBrowser) {
+    if ( tabBrowser ) {
+        if ( tabBrowser.closeTab ) {
             tabBrowser.closeTab(tab);
-        };
+        } else {
+            tabBrowser.removeTab(tab);
+        }
     }
-    return function(tab, tabBrowser) {
-        if ( !tabBrowser ) { return; }
-        tabBrowser.removeTab(tab);
-    };
-})();
+};
 
 /******************************************************************************/
 
@@ -1202,10 +1195,6 @@ var tabWatcher = (function() {
         if ( !browser ) {
             return -1;
         }
-        // TODO: Add support for this
-        if ( vAPI.thunderbird ) {
-            return -1;
-        }
         var win = getOwnerWindow(browser);
         if ( !win ) {
             return -1;
@@ -1224,6 +1213,15 @@ var tabWatcher = (function() {
         // https://developer.mozilla.org/en-US/Add-ons/Firefox_for_Android/API/BrowserApp
         if ( vAPI.fennec ) {
             return tabbrowser.tabs.indexOf(tabbrowser.getTabForBrowser(browser));
+        }
+        // Thunderbird
+        if ( tabbrowser.tabInfo ) {
+            for ( var [index, tab] of tabbrowser.tabInfo.entries() ) {
+                if ( tab.browser ) {
+                    return index;
+                }
+            }
+            return -1;
         }
         return tabbrowser.browsers.indexOf(browser);
     };
@@ -1245,42 +1243,31 @@ var tabWatcher = (function() {
         if ( tabbrowser === null ) {
             return null;
         }
-        if ( !tabbrowser.tabs || i >= tabbrowser.tabs.length ) {
-            return null;
+        // Thunderbird
+        if ( tabbrowser.tabInfo && i < tabbrowser.tabInfo.length ) {
+            return tabbrowser.tabInfo[i].tabNode;
         }
-        return tabbrowser.tabs[i];
+        if ( tabbrowser.tabs && i < tabbrowser.tabs.length ) {
+            return tabbrowser.tabs[i];
+        }
+        return null;
     };
 
-    var browserFromTarget = (function() {
-        if ( vAPI.fennec ) {
-            return function(target) {
-                if ( !target ) { return null; }
-                if ( target.browser ) {     // target is a tab
-                    target = target.browser;
-                }
-                return target.localName === 'browser' ? target : null;
-            };
+    var browserFromTarget = function(target) {
+        if ( !target ) { return null; }
+        if ( target.browser ) {
+            target = target.browser;
         }
-        if ( vAPI.thunderbird ) {
-            return function(target) {
-                if ( !target ) { return null; }
-                if ( target.mode ) {        // target is object with tab info
-                    var browserFunc = target.mode.getBrowser || target.mode.tabType.getBrowser;
-                    if ( browserFunc ) {
-                        return browserFunc.call(target.mode.tabType, target);
-                    }
-                }
-                return target.localName === 'browser' ? target : null;
-            };
-        }
-        return function(target) {
-            if ( !target ) { return null; }
-            if ( target.linkedPanel ) {     // target is a tab
-                target = target.linkedBrowser;
+        else if ( target.mode ) {
+            var browserFunc = target.mode.getBrowser || target.mode.tabType.getBrowser;
+            if ( browserFunc ) {
+                return browserFunc.call(target.mode.tabType, target);
             }
-            return target.localName === 'browser' ? target : null;
-        };
-    })();
+        } else if ( target.linkedPanel ) {     // target is a tab
+            target = target.linkedBrowser;
+        }
+        return target.localName === 'browser' ? target : null;
+    };
 
     var tabIdFromTarget = function(target) {
         var browser = browserFromTarget(target);
@@ -1309,7 +1296,7 @@ var tabWatcher = (function() {
         if ( tabBrowser === null ) {
             return null;
         }
-        if ( vAPI.thunderbird ) {
+        if ( tabBrowser.tabInfo ) {
             // Directly at startup the first tab may not be initialized
             if ( tabBrowser.tabInfo.length === 0 ) {
                 return null;
@@ -1453,7 +1440,7 @@ var tabWatcher = (function() {
         // To keep in mind: not all windows are tab containers,
         // sometimes the window IS the tab.
         var tabs;
-        if ( vAPI.thunderbird ) {
+        if ( tabBrowser.tabInfo ) {
             tabs = tabBrowser.tabInfo;
         } else if ( tabBrowser.tabs ) {
             tabs = tabBrowser.tabs;
@@ -3335,7 +3322,7 @@ vAPI.contextMenu = (function() {
 //     extensions.ublock0.shortcuts.[command id]    => -
 
 vAPI.commands = (function() {
-    if ( vAPI.fennec || vAPI.thunderbird ) { return; }
+    if ( vAPI.fennec ) { return; }
 
     var commands = [
         { name: 'launch-element-zapper', description: "__MSG_popupTipZapper__" },
@@ -3351,7 +3338,7 @@ vAPI.commands = (function() {
         clientListener(match[1]);
     };
 
-    var browserWindow = Components.classes["@mozilla.org/appshell/window-mediator;1"].getService(Components.interfaces.nsIWindowMediator).getMostRecentWindow("navigator:browser");
+    var browserWindow = Services.wm.getMostRecentWindow(null);
 
     var getAll = function () {
         for (var command of commands) {
@@ -3395,7 +3382,7 @@ vAPI.commands = (function() {
         // Already registered?
         if (myKeyset !== null) { return; }
 
-        var mainKeyset = doc.getElementById('mainKeyset'),
+        var mainKeyset = doc.getElementById('mainKeyset') || doc.getElementById('mailKeys'),
             keysetHolder = mainKeyset && mainKeyset.parentNode;
         if (keysetHolder === null) { return; }
 
