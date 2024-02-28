@@ -5716,6 +5716,106 @@ function(token, selector, behavior) {
 }
 
 
+spoof-css.js application/javascript
+function(selector) {
+	'use strict';
+	if ( selector === undefined || selector === '' ) { return; }
+	const extraArgs = Array.from(arguments).slice(1);
+	const toCamelCase = s => s.replace(/-[a-z]/g, s => s.charAt(1).toUpperCase());
+	const propToValueMap = new Map();
+	for ( let i = 0; i < extraArgs.length; i += 2 ) {
+		if ( typeof extraArgs[i+0] !== 'string' ) { break; }
+		if ( extraArgs[i+0] === '' ) { break; }
+		if ( typeof extraArgs[i+1] !== 'string' ) { break; }
+		propToValueMap.set(toCamelCase(extraArgs[i+0]), extraArgs[i+1]);
+	}
+	const log = console.log.bind(console, makeLogPrefix('spoof-css', selector, ...extraArgs));
+	const shouldDebug = propToValueMap.get('debug') || 0;
+	const instanceProperties = [ 'cssText', 'length', 'parentRule' ];
+	const spoofStyle = (prop, real) => {
+		const normalProp = toCamelCase(prop);
+		const shouldSpoof = propToValueMap.has(normalProp);
+		const value = shouldSpoof ? propToValueMap.get(normalProp) : real;
+		if ( shouldSpoof ) {
+			log(`Spoofing ${prop} to ${value}`);
+		}
+		return value;
+	};
+	const cloackFunc = (fn, thisArg, name) => {
+		const trap = fn.bind(thisArg);
+		Object.defineProperty(trap, 'name', { value: name });
+		Object.defineProperty(trap, 'toString', {
+			value: ( ) => `function ${name}() { [native code] }`
+		});
+		return trap;
+	};
+	self.getComputedStyle = new Proxy(self.getComputedStyle, {
+		apply: function(target, thisArg, args) {
+			if ( shouldDebug !== 0 ) { debugger; }	// jshint ignore: line
+			const style = Reflect.apply(target, thisArg, args);
+			const targetElements = new WeakSet(document.querySelectorAll(selector));
+			if ( targetElements.has(args[0]) === false ) { return style; }
+			const proxiedStyle = new Proxy(style, {
+				get(target, prop, receiver) {
+					if ( typeof target[prop] === 'function' ) {
+						if ( prop === 'getPropertyValue' ) {
+							return cloackFunc(function getPropertyValue(prop) {
+								return spoofStyle(prop, target[prop]);
+							}, target, 'getPropertyValue');
+						}
+						return cloackFunc(target[prop], target, prop);
+					}
+					if ( instanceProperties.includes(prop) ) {
+						return Reflect.get(target, prop);
+					}
+					return spoofStyle(prop, Reflect.get(target, prop, receiver));
+				},
+				getOwnPropertyDescriptor(target, prop) {
+					if ( propToValueMap.has(prop) ) {
+						return {
+							configurable: true,
+							enumerable: true,
+							value: propToValueMap.get(prop),
+							writable: true,
+						};
+					}
+					return Reflect.getOwnPropertyDescriptor(target, prop);
+				},
+			});
+			return proxiedStyle;
+		},
+		get(target, prop, receiver) {
+			if ( prop === 'toString' ) {
+				return target.toString.bind(target);
+			}
+			return Reflect.get(target, prop, receiver);
+		},
+	});
+	Element.prototype.getBoundingClientRect = new Proxy(Element.prototype.getBoundingClientRect, {
+		apply: function(target, thisArg, args) {
+			if ( shouldDebug !== 0 ) { debugger; }	// jshint ignore: line
+			const rect = Reflect.apply(target, thisArg, args);
+			const targetElements = new WeakSet(document.querySelectorAll(selector));
+			if ( targetElements.has(thisArg) === false ) { return rect; }
+			let { height, width } = rect;
+			if ( propToValueMap.has('width') ) {
+				width = parseFloat(propToValueMap.get('width'));
+			}
+			if ( propToValueMap.has('height') ) {
+				height = parseFloat(propToValueMap.get('height'));
+			}
+			return new DOMRect(rect.x, rect.y, width, height);
+		},
+		get(target, prop, receiver) {
+			if ( prop === 'toString' ) {
+				return target.toString.bind(target);
+			}
+			return Reflect.get(target, prop, receiver);
+		},
+	});
+}
+
+
 # Replace text instance(s) with another text instance inside specific
 # DOM nodes. By default, the scriplet stops and quits at the interactive
 # stage of a document.
