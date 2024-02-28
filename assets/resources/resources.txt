@@ -1922,6 +1922,39 @@ function(needle) {
 }
 
 
+# Prevent a function call from throwing. The function will be called, however
+# should it throw, the scriptlet will silently process the exception and
+# return as if no exception has occurred.
+# Parameter is a chain of dot-separated properties which leads to the
+# function to be trapped.
+call-nothrow.js application/javascript
+function(chain) {
+	'use strict';
+	if ( chain === undefined || chain === '' ) { return; }
+	const parts = chain.split('.');
+	let owner = window, prop;
+	for (;;) {
+		prop = parts.shift();
+		if ( parts.length === 0 ) { break; }
+		owner = owner[prop];
+		if ( owner instanceof Object === false ) { return; }
+	}
+	if ( prop === '' ) { return; }
+	const fn = owner[prop];
+	if ( typeof fn !== 'function' ) { return; }
+	owner[prop] = new Proxy(fn, {
+		apply: function(...args) {
+			let r;
+			try {
+				r = Reflect.apply(...args);
+			} catch(ex) {
+			}
+			return r;
+		},
+	});
+}
+
+
 # Prevent web pages from using RTCPeerConnection(), and report attempts in console.
 nowebrtc.js application/javascript
 (function() {
