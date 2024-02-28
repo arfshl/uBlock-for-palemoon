@@ -5187,6 +5187,213 @@ function(propsToMatch, directive) {
 }
 
 
+# Replaces response text content of fetch requests if all given parameters
+# match.
+#
+# Reference:
+# https://github.com/AdguardTeam/Scriptlets/blob/master/src/scriptlets/trusted-replace-fetch-response.js
+trusted-replace-fetch-response.js application/javascript
+alias trusted-rpfr.js
+function(pattern, replacement, propsToMatch) {
+	'use strict';
+	const scriptletGlobals = {};
+	function safeSelf() {
+		if ( scriptletGlobals.safeSelf ) {
+			return scriptletGlobals.safeSelf;
+		}
+		const self = window;
+		const safe = {
+			'Array_from': Array.from,
+			'Object_fromEntries': Object.fromEntries.bind(Object),
+			'RegExp': self.RegExp,
+			'RegExp_test': self.RegExp.prototype.test,
+			'Request_clone': self.Request.prototype.clone,
+			'JSON': self.JSON,
+			'JSON_stringifyFn': self.JSON.stringify,
+			'JSON_stringify': (...args) => safe.JSON_stringifyFn.call(safe.JSON, ...args),
+			escapeRegexChars(s) {
+				return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+			},
+			initPattern(pattern, options = {}) {
+				if ( pattern === '' ) {
+					return { matchAll: true };
+				}
+				const expect = (options.canNegate !== true || pattern.startsWith('!') === false);
+				if ( expect === false ) {
+					pattern = pattern.slice(1);
+				}
+				const match = /^\/(.+)\/([gimsu]*)$/.exec(pattern);
+				if ( match !== null ) {
+					return {
+						re: new this.RegExp(
+							match[1],
+							match[2] || options.flags
+						),
+						expect,
+					};
+				}
+				if ( options.flags !== undefined ) {
+					return {
+						re: new this.RegExp(this.escapeRegexChars(pattern),
+							options.flags
+						),
+						expect,
+					};
+				}
+				return { pattern, expect };
+			},
+			testPattern(details, haystack) {
+				if ( details.matchAll ) { return true; }
+				if ( details.re ) {
+					return this.RegExp_test.call(details.re, haystack) === details.expect;
+				}
+				return haystack.includes(details.pattern) === details.expect;
+			},
+			patternToRegex(pattern, flags = undefined, verbatim = false) {
+				if ( pattern === '' ) { return /^/; }
+				const match = /^\/(.+)\/([gimsu]*)$/.exec(pattern);
+				if ( match === null ) {
+					const reStr = this.escapeRegexChars(pattern);
+					return new RegExp(verbatim ? `^${reStr}$` : reStr, flags);
+				}
+				try {
+					return new RegExp(match[1], match[2] || undefined);
+				}
+				catch(ex) {
+				}
+				return /^/;
+			},
+			getExtraArgs(args, offset = 0) {
+				const entries = args.slice(offset).reduce((out, v, i, a) => {
+					if ( (i & 1) === 0 ) {
+						const rawValue = a[i+1];
+						const value = /^\d+$/.test(rawValue)
+							? parseInt(rawValue, 10)
+							: rawValue;
+						out.push([ a[i], value ]);
+					}
+					return out;
+				}, []);
+				return this.Object_fromEntries(entries);
+			},
+		};
+		scriptletGlobals.safeSelf = safe;
+		return safe;
+	}
+	function makeLogPrefix(...args) {
+		return `uBO: [${args.join(' \u205D ')}]` || '';
+	}
+	function parsePropertiesToMatch(propsToMatch, implicit = '') {
+		const safe = safeSelf();
+		const needles = new Map();
+		if ( propsToMatch === undefined || propsToMatch === '' ) { return needles; }
+		const options = { canNegate: true };
+		for ( const needle of propsToMatch.split(/\s+/) ) {
+			const [ prop, pattern ] = needle.split(':');
+			if ( prop === '' ) { continue; }
+			if ( pattern !== undefined ) {
+				needles.set(prop, safe.initPattern(pattern, options));
+			} else if ( implicit !== '' ) {
+				needles.set(implicit, safe.initPattern(prop, options));
+			}
+		}
+		return needles;
+	}
+	function matchObjectProperties(propNeedles, ...objs) {
+		if ( matchObjectProperties.extractProperties === undefined ) {
+			matchObjectProperties.extractProperties = (src, des, props) => {
+				for ( const p of props ) {
+					const v = src[p];
+					if ( v === undefined ) { continue; }
+					des[p] = src[p];
+				}
+			};
+		}
+		const safe = safeSelf();
+		const haystack = {};
+		const props = safe.Array_from(propNeedles.keys());
+		for ( const obj of objs ) {
+			if ( obj instanceof Object === false ) { continue; }
+			matchObjectProperties.extractProperties(obj, haystack, props);
+		}
+		for ( const [ prop, details ] of propNeedles ) {
+			let value = haystack[prop];
+			if ( value === undefined ) { continue; }
+			if ( typeof value !== 'string' ) {
+				try { value = safe.JSON_stringify(value); }
+				catch(ex) { }
+				if ( typeof value !== 'string' ) { continue; }
+			}
+			if ( safe.testPattern(details, value) ) { continue; }
+			return false;
+		}
+		return true;
+	}
+	if ( pattern === undefined || pattern === '' ) { return; }
+	if ( replacement === undefined ) { replacement = ''; }
+	if ( propsToMatch === undefined ) { propsToMatch = ''; }
+	const safe = safeSelf();
+	const logPrefix = makeLogPrefix('trusted-replace-fetch-response', pattern, replacement, propsToMatch);
+	const log = console.log.bind(console, logPrefix);
+	const logErr = console.error.bind(console, logPrefix);
+	const extraArgs = safe.getExtraArgs(Array.from(arguments), 3);
+	if ( pattern === '*' ) { pattern = '.*'; }
+	const rePattern = safe.patternToRegex(pattern);
+	const propNeedles = parsePropertiesToMatch(propsToMatch, 'url');
+	self.fetch = new Proxy(self.fetch, {
+		apply: function(target, thisArg, args) {
+			const fetchPromise = Reflect.apply(target, thisArg, args);
+			let outcome = 'match';
+			if ( propNeedles.size !== 0 ) {
+				const objs = [ args[0] instanceof Object ? args[0] : { url: args[0] } ];
+				if ( objs[0] instanceof Request ) {
+					if ( !objs[0].bodyUsed ) {
+						objs[0] = safe.Request_clone.call(objs[0]);
+					}
+				}
+				if ( args[1] instanceof Object ) {
+					objs.push(args[1]);
+				}
+				if ( matchObjectProperties(propNeedles, ...objs) === false ) {
+					outcome = 'nomatch';
+				}
+			}
+			if ( outcome === 'nomatch' ) { return fetchPromise; }
+			if ( extraArgs.scripletLogLevel > 1 ) {
+				log(`Matched "propsToMatch"\n${propsToMatch}`);
+			}
+			return fetchPromise.then(responseBefore => {
+				const response = responseBefore.clone();
+				return response.text().then(textBefore => {
+						const textAfter = textBefore.replace(rePattern, replacement);
+						const outcome = textAfter !== textBefore ? 'match' : 'nomatch';
+						if ( outcome === 'nomatch' ) { return responseBefore; }
+						log('Replaced');
+						const responseAfter = new Response(textAfter, {
+							status: responseBefore.status,
+							statusText: responseBefore.statusText,
+							headers: responseBefore.headers,
+						});
+						Object.defineProperties(responseAfter, {
+							ok: { value: responseBefore.ok },
+							redirected: { value: responseBefore.redirected },
+							type: { value: responseBefore.type },
+							url: { value: responseBefore.url },
+						});
+						return responseAfter;
+				}).catch(reason => {
+					logErr(reason);
+					return responseBefore;
+					});
+			}).catch(reason => {
+				logErr(reason);
+				return fetchPromise;
+			});
+		}
+	});
+}
+
+
 remove-attr.js application/javascript
 alias ra.js
 function(token, selector, behavior) {
