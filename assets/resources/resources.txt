@@ -5716,6 +5716,343 @@ function(token, selector, behavior) {
 }
 
 
+# Replace text instance(s) with another text instance inside specific
+# DOM nodes. By default, the scriplet stops and quits at the interactive
+# stage of a document.
+#
+# See commit messages for usage:
+# - https://github.com/gorhill/uBlock/commit/99ce027fd702
+# - https://github.com/gorhill/uBlock/commit/41876336db48
+trusted-replace-node-text.js application/javascript
+alias trusted-rpnt.js
+alias replace-node-text.js
+alias rpnt.js
+function(nodeName, pattern, replacement) {
+	'use strict';
+	const scriptletGlobals = {};
+	function safeSelf() {
+		if ( scriptletGlobals.safeSelf ) {
+			return scriptletGlobals.safeSelf;
+		}
+		const self = window;
+		const safe = {
+			'Object_fromEntries': Object.fromEntries.bind(Object),
+			'RegExp_test': self.RegExp.prototype.test,
+			'addEventListener': self.EventTarget.prototype.addEventListener,
+			'removeEventListener': self.EventTarget.prototype.removeEventListener,
+			escapeRegexChars(s) {
+				return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+			},
+			patternToRegex(pattern, flags = undefined, verbatim = false) {
+				if ( pattern === '' ) { return /^/; }
+				const match = /^\/(.+)\/([gimsu]*)$/.exec(pattern);
+				if ( match === null ) {
+					const reStr = this.escapeRegexChars(pattern);
+					return new RegExp(verbatim ? `^${reStr}$` : reStr, flags);
+				}
+				try {
+					return new RegExp(match[1], match[2] || undefined);
+				}
+				catch(ex) {
+				}
+				return /^/;
+			},
+			getExtraArgs(args, offset = 0) {
+				const entries = args.slice(offset).reduce((out, v, i, a) => {
+					if ( (i & 1) === 0 ) {
+						const rawValue = a[i+1];
+						const value = /^\d+$/.test(rawValue)
+							? parseInt(rawValue, 10)
+							: rawValue;
+						out.push([ a[i], value ]);
+					}
+					return out;
+				}, []);
+				return this.Object_fromEntries(entries);
+			},
+		};
+		scriptletGlobals.safeSelf = safe;
+		return safe;
+	}
+	function makeLogPrefix(...args) {
+		return `uBO: [${args.join(' \u205D ')}]` || '';
+	}
+	function runAt(fn, when) {
+		const intFromReadyState = state => {
+			const targets = {
+				'loading': 1,
+				'interactive': 2, 'end': 2, '2': 2,
+				'complete': 3, 'idle': 3, '3': 3,
+			};
+			const tokens = Array.isArray(state) ? state : [ state ];
+			for ( const token of tokens ) {
+				const prop = `${token}`;
+				if ( targets.hasOwnProperty(prop) === false ) { continue; }
+				return targets[prop];
+			}
+			return 0;
+		};
+		const runAt = intFromReadyState(when);
+		if ( intFromReadyState(document.readyState) >= runAt ) {
+			fn(); return;
+		}
+		const onStateChange = ( ) => {
+			if ( intFromReadyState(document.readyState) < runAt ) { return; }
+			fn();
+			safe.removeEventListener.apply(document, args);
+		};
+		const safe = safeSelf();
+		const args = [ 'readystatechange', onStateChange, { capture: true } ];
+		safe.addEventListener.apply(document, args);
+	}
+	function replaceNodeTextFn(
+		nodeName = '',
+		pattern = '',
+		replacement = ''
+	) {
+		const safe = safeSelf();
+		const log = console.log.bind(console, makeLogPrefix('trusted-replace-node-text', ...arguments));
+		const reNodeName = safe.patternToRegex(nodeName, 'i', true);
+		const rePattern = safe.patternToRegex(pattern, 'gms');
+		const extraArgs = safe.getExtraArgs(Array.from(arguments), 3);
+		const reCondition = safe.patternToRegex(extraArgs.condition || '', 'ms');
+		const stop = (takeRecord = true) => {
+			if ( takeRecord ) {
+				handleMutations(observer.takeRecords());
+			}
+			observer.disconnect();
+			if ( extraArgs.scriptletLogLevel > 1 ) {
+				log('Quitting');
+			}
+		};
+		let sedCount = extraArgs.sedCount || 0;
+		const handleNode = node => {
+			const before = node.textContent;
+			reCondition.lastIndex = 0;
+			if ( safe.RegExp_test.call(reCondition, before) === false ) { return true; }
+			rePattern.lastIndex = 0;
+			if ( safe.RegExp_test.call(rePattern, before) === false ) { return true; }
+			rePattern.lastIndex = 0;
+			const after = pattern !== ''
+				? before.replace(rePattern, replacement)
+				: replacement;
+			node.textContent = after;
+			if ( extraArgs.scriptletLogLevel > 1 ) {
+				log(`Text before:\n${before.trim()}`);
+			}
+			log(`Text after:\n${after.trim()}`);
+			return sedCount === 0 || (sedCount -= 1) !== 0;
+		};
+		const handleMutations = mutations => {
+			for ( const mutation of mutations ) {
+				for ( const node of mutation.addedNodes ) {
+					if ( reNodeName.test(node.nodeName) === false ) { continue; }
+					if ( handleNode(node) ) { continue; }
+					stop(false); return;
+				}
+			}
+		};
+		const observer = new MutationObserver(handleMutations);
+		observer.observe(document, { childList: true, subtree: true });
+		if ( document.documentElement ) {
+			const treeWalker = document.createTreeWalker(
+				document.documentElement,
+				NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT
+			);
+			let count = 0;
+			for (;;) {
+				const node = treeWalker.nextNode();
+				count += 1;
+				if ( node === null ) { break; }
+				if ( reNodeName.test(node.nodeName) === false ) { continue; }
+				if ( handleNode(node) ) { continue; }
+				stop(); break;
+			}
+			log(`${count} nodes present before installing mutation observer`);
+		}
+		if ( extraArgs.stay ) { return; }
+		runAt(( ) => {
+			const quitAfter = extraArgs.quitAfter || 0;
+			if ( quitAfter !== 0 ) {
+				setTimeout(( ) => { stop(); }, quitAfter);
+			} else {
+				stop();
+			}
+		}, 'interactive');
+	}
+	if ( arguments.length > 3 ) {
+		const extraArgs = Array.from(arguments).slice(3);
+		replaceNodeTextFn(nodeName, pattern, replacement, ...extraArgs);
+	} else {
+		replaceNodeTextFn(nodeName, pattern, replacement);
+	}
+}
+
+
+remove-node-text.js application/javascript
+alias rmnt.js
+function(nodeName, condition) {
+	'use strict';
+	const scriptletGlobals = {};
+	function safeSelf() {
+		if ( scriptletGlobals.safeSelf ) {
+			return scriptletGlobals.safeSelf;
+		}
+		const self = window;
+		const safe = {
+			'Object_fromEntries': Object.fromEntries.bind(Object),
+			'RegExp_test': self.RegExp.prototype.test,
+			'addEventListener': self.EventTarget.prototype.addEventListener,
+			'removeEventListener': self.EventTarget.prototype.removeEventListener,
+			escapeRegexChars(s) {
+				return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+			},
+			patternToRegex(pattern, flags = undefined, verbatim = false) {
+				if ( pattern === '' ) { return /^/; }
+				const match = /^\/(.+)\/([gimsu]*)$/.exec(pattern);
+				if ( match === null ) {
+					const reStr = this.escapeRegexChars(pattern);
+					return new RegExp(verbatim ? `^${reStr}$` : reStr, flags);
+				}
+				try {
+					return new RegExp(match[1], match[2] || undefined);
+				}
+				catch(ex) {
+				}
+				return /^/;
+			},
+			getExtraArgs(args, offset = 0) {
+				const entries = args.slice(offset).reduce((out, v, i, a) => {
+					if ( (i & 1) === 0 ) {
+						const rawValue = a[i+1];
+						const value = /^\d+$/.test(rawValue)
+							? parseInt(rawValue, 10)
+							: rawValue;
+						out.push([ a[i], value ]);
+					}
+					return out;
+				}, []);
+				return this.Object_fromEntries(entries);
+			},
+		};
+		scriptletGlobals.safeSelf = safe;
+		return safe;
+	}
+	function makeLogPrefix(...args) {
+		return `uBO: [${args.join(' \u205D ')}]` || '';
+	}
+	function runAt(fn, when) {
+		const intFromReadyState = state => {
+			const targets = {
+				'loading': 1,
+				'interactive': 2, 'end': 2, '2': 2,
+				'complete': 3, 'idle': 3, '3': 3,
+			};
+			const tokens = Array.isArray(state) ? state : [ state ];
+			for ( const token of tokens ) {
+				const prop = `${token}`;
+				if ( targets.hasOwnProperty(prop) === false ) { continue; }
+				return targets[prop];
+			}
+			return 0;
+		};
+		const runAt = intFromReadyState(when);
+		if ( intFromReadyState(document.readyState) >= runAt ) {
+			fn(); return;
+		}
+		const onStateChange = ( ) => {
+			if ( intFromReadyState(document.readyState) < runAt ) { return; }
+			fn();
+			safe.removeEventListener.apply(document, args);
+		};
+		const safe = safeSelf();
+		const args = [ 'readystatechange', onStateChange, { capture: true } ];
+		safe.addEventListener.apply(document, args);
+	}
+	function replaceNodeTextFn(
+		nodeName = '',
+		pattern = '',
+		replacement = ''
+	) {
+		const safe = safeSelf();
+		const log = console.log.bind(console, makeLogPrefix('remove-node-text', ...arguments));
+		const reNodeName = safe.patternToRegex(nodeName, 'i', true);
+		const rePattern = safe.patternToRegex(pattern, 'gms');
+		const extraArgs = safe.getExtraArgs(Array.from(arguments), 3);
+		const reCondition = safe.patternToRegex(extraArgs.condition || '', 'ms');
+		const stop = (takeRecord = true) => {
+			if ( takeRecord ) {
+				handleMutations(observer.takeRecords());
+			}
+			observer.disconnect();
+			if ( extraArgs.scriptletLogLevel > 1 ) {
+				log('Quitting');
+			}
+		};
+		let sedCount = extraArgs.sedCount || 0;
+		const handleNode = node => {
+			const before = node.textContent;
+			reCondition.lastIndex = 0;
+			if ( safe.RegExp_test.call(reCondition, before) === false ) { return true; }
+			rePattern.lastIndex = 0;
+			if ( safe.RegExp_test.call(rePattern, before) === false ) { return true; }
+			rePattern.lastIndex = 0;
+			const after = pattern !== ''
+				? before.replace(rePattern, replacement)
+				: replacement;
+			node.textContent = after;
+			if ( extraArgs.scriptletLogLevel > 1 ) {
+				log(`Text before:\n${before.trim()}`);
+			}
+			log(`Text after:\n${after.trim()}`);
+			return sedCount === 0 || (sedCount -= 1) !== 0;
+		};
+		const handleMutations = mutations => {
+			for ( const mutation of mutations ) {
+				for ( const node of mutation.addedNodes ) {
+					if ( reNodeName.test(node.nodeName) === false ) { continue; }
+					if ( handleNode(node) ) { continue; }
+					stop(false); return;
+				}
+			}
+		};
+		const observer = new MutationObserver(handleMutations);
+		observer.observe(document, { childList: true, subtree: true });
+		if ( document.documentElement ) {
+			const treeWalker = document.createTreeWalker(
+				document.documentElement,
+				NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT
+			);
+			let count = 0;
+			for (;;) {
+				const node = treeWalker.nextNode();
+				count += 1;
+				if ( node === null ) { break; }
+				if ( reNodeName.test(node.nodeName) === false ) { continue; }
+				if ( handleNode(node) ) { continue; }
+				stop(); break;
+			}
+			log(`${count} nodes present before installing mutation observer`);
+		}
+		if ( extraArgs.stay ) { return; }
+		runAt(( ) => {
+			const quitAfter = extraArgs.quitAfter || 0;
+			if ( quitAfter !== 0 ) {
+				setTimeout(( ) => { stop(); }, quitAfter);
+			} else {
+				stop();
+			}
+		}, 'interactive');
+	}
+	if ( arguments.length > 2 ) {
+		const extraArgs = Array.from(arguments).slice(2);
+		replaceNodeTextFn(nodeName, '', '', 'condition', condition, ...extraArgs);
+	} else {
+		replaceNodeTextFn(nodeName, '', '', 'condition', condition);
+	}
+}
+
+
 # https://github.com/gorhill/uBlock/commit/1de0e820b87fdd3717b9f2653baaa7a934075055
 no-requestAnimationFrame-if.js application/javascript
 alias norafif.js
