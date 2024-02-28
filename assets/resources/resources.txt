@@ -4915,6 +4915,278 @@ function(propsToMatch, responseBody) {
 }
 
 
+no-xhr-if.js application/javascript
+alias prevent-xhr.js
+function(propsToMatch, directive) {
+	'use strict';
+	const scriptletGlobals = {};
+	function safeSelf() {
+		if ( scriptletGlobals.safeSelf ) {
+			return scriptletGlobals.safeSelf;
+		}
+		const self = window;
+		const safe = {
+			'Math_max': Math.max,
+			'Math_min': Math.min,
+			'Math_random': Math.random,
+			'Array_from': Array.from,
+			'RegExp': self.RegExp,
+			'RegExp_test': self.RegExp.prototype.test,
+			'JSON': self.JSON,
+			'JSON_stringifyFn': self.JSON.stringify,
+			'JSON_stringify': (...args) => safe.JSON_stringifyFn.call(safe.JSON, ...args),
+			escapeRegexChars(s) {
+				return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+			},
+			initPattern(pattern, options = {}) {
+				if ( pattern === '' ) {
+					return { matchAll: true };
+				}
+				const expect = (options.canNegate !== true || pattern.startsWith('!') === false);
+				if ( expect === false ) {
+					pattern = pattern.slice(1);
+				}
+				const match = /^\/(.+)\/([gimsu]*)$/.exec(pattern);
+				if ( match !== null ) {
+					return {
+						re: new this.RegExp(
+							match[1],
+							match[2] || options.flags
+						),
+						expect,
+					};
+				}
+				if ( options.flags !== undefined ) {
+					return {
+						re: new this.RegExp(this.escapeRegexChars(pattern),
+							options.flags
+						),
+						expect,
+					};
+				}
+				return { pattern, expect };
+			},
+			testPattern(details, haystack) {
+				if ( details.matchAll ) { return true; }
+				if ( details.re ) {
+					return this.RegExp_test.call(details.re, haystack) === details.expect;
+				}
+				return haystack.includes(details.pattern) === details.expect;
+			},
+		};
+		scriptletGlobals.safeSelf = safe;
+		return safe;
+	}
+	function makeLogPrefix(...args) {
+		return `uBO: [${args.join(' \u205D ')}]` || '';
+	}
+	function parsePropertiesToMatch(propsToMatch, implicit = '') {
+		const safe = safeSelf();
+		const needles = new Map();
+		if ( propsToMatch === undefined || propsToMatch === '' ) { return needles; }
+		const options = { canNegate: true };
+		for ( const needle of propsToMatch.split(/\s+/) ) {
+			const [ prop, pattern ] = needle.split(':');
+			if ( prop === '' ) { continue; }
+			if ( pattern !== undefined ) {
+				needles.set(prop, safe.initPattern(pattern, options));
+			} else if ( implicit !== '' ) {
+				needles.set(implicit, safe.initPattern(prop, options));
+			}
+		}
+		return needles;
+	}
+	function matchObjectProperties(propNeedles, ...objs) {
+		if ( matchObjectProperties.extractProperties === undefined ) {
+			matchObjectProperties.extractProperties = (src, des, props) => {
+				for ( const p of props ) {
+					const v = src[p];
+					if ( v === undefined ) { continue; }
+					des[p] = src[p];
+				}
+			};
+		}
+		const safe = safeSelf();
+		const haystack = {};
+		const props = safe.Array_from(propNeedles.keys());
+		for ( const obj of objs ) {
+			if ( obj instanceof Object === false ) { continue; }
+			matchObjectProperties.extractProperties(obj, haystack, props);
+		}
+		for ( const [ prop, details ] of propNeedles ) {
+			let value = haystack[prop];
+			if ( value === undefined ) { continue; }
+			if ( typeof value !== 'string' ) {
+				try { value = safe.JSON_stringify(value); }
+				catch(ex) { }
+				if ( typeof value !== 'string' ) { continue; }
+			}
+			if ( safe.testPattern(details, value) ) { continue; }
+			return false;
+		}
+		return true;
+	}
+	function generateContentFn(directive) {
+		const safe = safeSelf();
+		const randomize = len => {
+			const chunks = [];
+			let textSize = 0;
+			do {
+				const s = safe.Math_random().toString(36).slice(2);
+				chunks.push(s);
+				textSize += s.length;
+			}
+			while ( textSize < len );
+			return chunks.join(' ').slice(0, len);
+		};
+		if ( directive === 'true' ) {
+			return Promise.resolve(randomize(10));
+		}
+		if ( directive === 'emptyObj' ) {
+			return Promise.resolve('{}');
+		}
+		if ( directive === 'emptyArr' ) {
+			return Promise.resolve('[]');
+		}
+		if ( directive === 'emptyStr' ) {
+			return Promise.resolve('');
+		}
+		if ( directive.startsWith('length:') ) {
+			const match = /^length:(\d+)(?:-(\d+))?$/.exec(directive);
+			if ( match ) {
+				const min = parseInt(match[1], 10);
+				const extent = safe.Math_max(parseInt(match[2], 10) || 0, min) - min;
+				const len = safe.Math_min(min + extent * safe.Math_random(), 500000);
+				return Promise.resolve(randomize(len | 0));
+			}
+		}
+		return Promise.resolve('');
+	}
+	if ( propsToMatch === undefined ) { propsToMatch = ''; }
+	if ( directive === undefined ) { directive = ''; }
+	const safe = safeSelf();
+	const log = console.log.bind(console, makeLogPrefix('prevent-xhr', propsToMatch, directive));
+	const xhrInstances = new WeakMap();
+	const propNeedles = parsePropertiesToMatch(propsToMatch, 'url');
+	const headers = {
+		'date': '',
+		'content-type': '',
+		'content-length': '',
+	};
+	self.XMLHttpRequest = class extends self.XMLHttpRequest {
+		open(method, url, ...args) {
+			xhrInstances.delete(this);
+			const haystack = { method, url };
+			if ( propsToMatch === '' && directive === '' ) {
+				log(`Called: ${safe.JSON_stringify(haystack, null, 2)}`);
+				return super.open(method, url, ...args);
+			}
+			if ( matchObjectProperties(propNeedles, haystack) ) {
+				xhrInstances.set(this, haystack);
+			}
+			haystack.headers = Object.assign({}, headers);
+			return super.open(method, url, ...args);
+		}
+		send(...args) {
+			const haystack = xhrInstances.get(this);
+			if ( haystack === undefined ) {
+				return super.send(...args);
+			}
+			haystack.headers['date'] = (new Date()).toUTCString();
+			let promise = Promise.resolve({
+				xhr: this,
+				directive,
+				props: {
+					readyState: { value: 4 },
+					response: { value: '' },
+					responseText: { value: '' },
+					responseXML: { value: null },
+					responseURL: { value: haystack.url },
+					status: { value: 200 },
+					statusText: { value: 'OK' },
+				},
+			});
+			switch ( this.responseType ) {
+			case 'arraybuffer':
+				promise = promise.then(details => {
+					details.props.response.value = new ArrayBuffer(0);
+					return details;
+				});
+				haystack.headers['content-type'] = 'application/octet-stream';
+				break;
+			case 'blob':
+				promise = promise.then(details => {
+					details.props.response.value = new Blob([]);
+					return details;
+				});
+				haystack.headers['content-type'] = 'application/octet-stream';
+				break;
+			case 'document': {
+				promise = promise.then(details => {
+					const parser = new DOMParser();
+					const doc = parser.parseFromString('', 'text/html');
+					details.props.response.value = doc;
+					details.props.responseXML.value = doc;
+					return details;
+				});
+				haystack.headers['content-type'] = 'text/html';
+				break;
+			}
+			case 'json':
+				promise = promise.then(details => {
+					details.props.response.value = {};
+					details.props.responseText.value = '{}';
+					return details;
+				});
+				haystack.headers['content-type'] = 'application/json';
+				break;
+			default:
+				if ( directive === '' ) { break; }
+				promise = promise.then(details => {
+					return generateContentFn(details.directive).then(text => {
+						details.props.response.value = text;
+						details.props.responseText.value = text;
+						return details;
+					});
+				});
+				haystack.headers['content-type'] = 'text/plain';
+				break;
+			}
+			promise.then(details => {
+				haystack.headers['content-length'] = `${details.props.response.value}`.length;
+				Object.defineProperties(details.xhr, details.props);
+				details.xhr.dispatchEvent(new Event('readystatechange'));
+				details.xhr.dispatchEvent(new Event('load'));
+				details.xhr.dispatchEvent(new Event('loadend'));
+				log(`Prevented with response:\n${details.xhr.response}`);
+			});
+		}
+		getResponseHeader(headerName) {
+			const haystack = xhrInstances.get(this);
+			if ( haystack === undefined || this.readyState < this.HEADERS_RECEIVED ) {
+				return super.getResponseHeader(headerName);
+			}
+			const value = haystack.headers[headerName.toLowerCase()];
+			if ( value !== undefined && value !== '' ) { return value; }
+			return null;
+		}
+		getAllResponseHeaders() {
+			const haystack = xhrInstances.get(this);
+			if ( haystack === undefined || this.readyState < this.HEADERS_RECEIVED ) {
+				return super.getAllResponseHeaders();
+			}
+			const out = [];
+			for ( const [ name, value ] of Object.entries(haystack.headers) ) {
+				if ( !value ) { continue; }
+				out.push(`${name}: ${value}`);
+			}
+			if ( out.length !== 0 ) { out.push(''); }
+			return out.join('\r\n');
+		}
+	};
+}
+
+
 remove-attr.js application/javascript
 alias ra.js
 function(token, selector, behavior) {
