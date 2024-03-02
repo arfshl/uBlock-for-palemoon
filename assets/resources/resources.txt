@@ -2812,6 +2812,210 @@ function(rawPrunePaths, rawNeedlePaths, stackNeedle) {
 }
 
 
+# There is still code out there which uses `eval` in lieu of `JSON.parse`.
+evaldata-prune.js application/javascript
+function(rawPrunePaths, rawNeedlePaths) {
+	'use strict';
+	const scriptletGlobals = {};
+	function safeSelf() {
+		if ( scriptletGlobals.safeSelf ) {
+			return scriptletGlobals.safeSelf;
+		}
+		const self = window;
+		const safe = {
+			'Error': self.Error,
+			'Math_floor': Math.floor,
+			'Math_random': Math.random,
+			'RegExp_test': self.RegExp.prototype.test,
+			'RegExp_exec': self.RegExp.prototype.exec,
+			testPattern(details, haystack) {
+				if ( details.matchAll ) { return true; }
+				if ( details.re ) {
+					return this.RegExp_test.call(details.re, haystack) === details.expect;
+				}
+				return haystack.includes(details.pattern) === details.expect;
+			},
+		};
+		scriptletGlobals.safeSelf = safe;
+		return safe;
+	}
+	function getExceptionToken() {
+		const safe = safeSelf();
+		const token =
+			String.fromCharCode(Date.now() % 26 + 97) +
+			safe.Math_floor(safe.Math_random() * 982451653 + 982451653).toString(36);
+		const oe = self.onerror;
+		self.onerror = function(msg, ...args) {
+			if ( typeof msg === 'string' && msg.includes(token) ) { return true; }
+			if ( oe instanceof Function ) {
+				return oe.call(this, msg, ...args);
+			}
+		}.bind();
+		return token;
+	}
+	function matchesStackTrace(
+		needleDetails,
+		logLevel = ''
+	) {
+		const safe = safeSelf();
+		const log = console.log.bind(console);
+		const exceptionToken = getExceptionToken();
+		const error = new safe.Error(exceptionToken);
+		const docURL = new URL(self.location.href);
+		docURL.hash = '';
+		// Normalize stack trace
+		const reLine = /(.*?@)?(\S+)(:\d+):\d+\)?$/;
+		const lines = [];
+		for ( let line of error.stack.split(/[\n\r]+/) ) {
+			if ( line.includes(exceptionToken) ) { continue; }
+			line = line.trim();
+			const match = safe.RegExp_exec.call(reLine, line);
+			if ( match === null ) { continue; }
+			let url = match[2];
+			if ( url.startsWith('(') ) { url = url.slice(1); }
+			if ( url === docURL.href ) {
+				url = 'inlineScript';
+			} else if ( url.startsWith('<anonymous>') ) {
+				url = 'injectedScript';
+			}
+			let fn = match[1] !== undefined
+				? match[1].slice(0, -1)
+				: line.slice(0, match.index).trim();
+			if ( fn.startsWith('at') ) { fn = fn.slice(2).trim(); }
+			let rowcol = match[3];
+			lines.push(' ' + `${fn} ${url}${rowcol}:1`.trim());
+		}
+		lines[0] = `stackDepth:${lines.length-1}`;
+		const stack = lines.join('\t');
+		const r = needleDetails.matchAll !== true &&
+			safe.testPattern(needleDetails, stack);
+		if (
+			logLevel === 'all' ||
+			logLevel === 'match' && r ||
+			logLevel === 'nomatch' && !r
+		) {
+			log(stack.replace(/\t/g, '\n'));
+		}
+		return r;
+	}
+	function objectFindOwnerFn(
+		root,
+		path,
+		prune = false
+	) {
+		let owner = root;
+		let chain = path;
+		for (;;) {
+			if ( typeof owner !== 'object' || owner === null  ) { return false; }
+			const pos = chain.indexOf('.');
+			if ( pos === -1 ) {
+				if ( prune === false ) {
+					return owner.hasOwnProperty(chain);
+				}
+				let modified = false;
+				if ( chain === '*' ) {
+					for ( const key in owner ) {
+						if ( owner.hasOwnProperty(key) === false ) { continue; }
+						delete owner[key];
+						modified = true;
+					}
+				} else if ( owner.hasOwnProperty(chain) ) {
+					delete owner[chain];
+					modified = true;
+				}
+				return modified;
+			}
+			const prop = chain.slice(0, pos);
+			const next = chain.slice(pos + 1);
+			let found = false;
+			if ( prop === '[-]' && Array.isArray(owner) ) {
+				let i = owner.length;
+				while ( i-- ) {
+					if ( objectFindOwnerFn(owner[i], next) === false ) { continue; }
+					owner.splice(i, 1);
+					found = true;
+				}
+				return found;
+			}
+			if ( prop === '{-}' && owner instanceof Object ) {
+				for ( const key of Object.keys(owner) ) {
+					if ( objectFindOwnerFn(owner[key], next) === false ) { continue; }
+					delete owner[key];
+					found = true;
+				}
+				return found;
+			}
+			if (
+				prop === '[]' && Array.isArray(owner) ||
+				prop === '{}' && owner instanceof Object ||
+				prop === '*' && owner instanceof Object
+			) {
+				for ( const key of Object.keys(owner) ) {
+					if (objectFindOwnerFn(owner[key], next, prune) === false ) { continue; }
+					found = true;
+				}
+				return found;
+			}
+			if ( owner.hasOwnProperty(prop) === false ) { return false; }
+			owner = owner[prop];
+			chain = chain.slice(pos + 1);
+		}
+	}
+	function objectPruneFn(
+		obj,
+		rawPrunePaths,
+		rawNeedlePaths,
+		stackNeedleDetails = { matchAll: true },
+		extraArgs = {}
+	) {
+		if ( typeof rawPrunePaths !== 'string' ) { return; }
+		const prunePaths = rawPrunePaths !== ''
+			? rawPrunePaths.split(/ +/)
+			: [];
+		const needlePaths = prunePaths.length !== 0 && rawNeedlePaths !== ''
+			? rawNeedlePaths.split(/ +/)
+			: [];
+		if ( stackNeedleDetails.matchAll !== true ) {
+			if ( matchesStackTrace(stackNeedleDetails, extraArgs.logstack) === false ) {
+				return;
+			}
+		}
+		if ( objectPruneFn.mustProcess === undefined ) {
+			objectPruneFn.mustProcess = (root, needlePaths) => {
+				for ( const needlePath of needlePaths ) {
+					if ( objectFindOwnerFn(root, needlePath) === false ) {
+						return false;
+					}
+				}
+				return true;
+			};
+		}
+		if ( prunePaths.length === 0 ) { return; }
+		let outcome = 'nomatch';
+		if ( objectPruneFn.mustProcess(obj, needlePaths) ) {
+			for ( const path of prunePaths ) {
+				if ( objectFindOwnerFn(obj, path, true) ) {
+					outcome = 'match';
+				}
+			}
+		}
+		if ( outcome === 'match' ) { return obj; }
+	}
+	if ( rawPrunePaths === undefined ) { rawPrunePaths = ''; }
+	if ( rawNeedlePaths === undefined ) { rawNeedlePaths = ''; }
+	self.eval = new Proxy(self.eval, {
+		apply(target, thisArg, args) {
+			const before = Reflect.apply(target, thisArg, args);
+			if ( typeof before === 'object' ) {
+				const after = objectPruneFn(before, rawPrunePaths, rawNeedlePaths);
+				return after || before;
+			}
+			return before;
+		}
+	});
+}
+
+
 # https://github.com/uBlockOrigin/uAssets/issues/521
 # https://github.com/uBlockOrigin/uAssets/issues/9123#issuecomment-848255120
 addEventListener-defuser.js application/javascript
