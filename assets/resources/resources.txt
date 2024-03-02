@@ -5816,6 +5816,153 @@ function(selector) {
 }
 
 
+# Set the `href` attribute to a value found in the DOM at, or below the
+# targeted `a` element.
+href-sanitizer.js application/javascript
+function(selector, source) {
+	'use strict';
+	const scriptletGlobals = {};
+	function safeSelf() {
+		if ( scriptletGlobals.safeSelf ) {
+			return scriptletGlobals.safeSelf;
+		}
+		const self = window;
+		const safe = {
+			'addEventListener': self.EventTarget.prototype.addEventListener,
+			'removeEventListener': self.EventTarget.prototype.removeEventListener,
+		};
+		scriptletGlobals.safeSelf = safe;
+		return safe;
+	}
+	function makeLogPrefix(...args) {
+		return `uBO: [${args.join(' \u205D ')}]` || '';
+	}
+	function runAt(fn, when) {
+		const intFromReadyState = state => {
+			const targets = {
+				'loading': 1,
+				'interactive': 2, 'end': 2, '2': 2,
+				'complete': 3, 'idle': 3, '3': 3,
+			};
+			const tokens = Array.isArray(state) ? state : [ state ];
+			for ( const token of tokens ) {
+				const prop = `${token}`;
+				if ( targets.hasOwnProperty(prop) === false ) { continue; }
+				return targets[prop];
+			}
+			return 0;
+		};
+		const runAt = intFromReadyState(when);
+		if ( intFromReadyState(document.readyState) >= runAt ) {
+			fn(); return;
+		}
+		const onStateChange = ( ) => {
+			if ( intFromReadyState(document.readyState) < runAt ) { return; }
+			fn();
+			safe.removeEventListener.apply(document, args);
+		};
+		const safe = safeSelf();
+		const args = [ 'readystatechange', onStateChange, { capture: true } ];
+		safe.addEventListener.apply(document, args);
+	}
+	if ( selector === undefined || selector === '' ) { return; }
+	if ( source === undefined || source === '' ) { source = 'text'; }
+	const log = console.log.bind(console, makeLogPrefix('href-sanitizer', selector, source));
+	const sanitizeCopycats = (href, text) => {
+		let elems = [];
+		try {
+			elems = document.querySelectorAll(`a[href="${href}"`);
+		}
+		catch(ex) {
+		}
+		for ( const elem of elems ) {
+			elem.setAttribute('href', text);
+		}
+		return elems.length;
+	};
+	const validateURL = text => {
+		if ( text === '' ) { return ''; }
+		if ( /[^\x21-\x7e]/.test(text) ) { return ''; }
+		try {
+			const url = new URL(text, document.location);
+			return url.href;
+		} catch(ex) {
+		}
+		return '';
+	};
+	const extractText = (elem, source) => {
+		if ( /^\[.*\]$/.test(source) ) {
+			return elem.getAttribute(source.slice(1,-1).trim()) || '';
+		}
+		if ( source.startsWith('?') ) {
+			try {
+				const url = new URL(elem.href, document.location);
+				return url.searchParams.get(source.slice(1)) || '';
+			} catch(x) {
+			}
+			return '';
+		}
+		if ( source === 'text' ) {
+			return elem.textContent
+				.replace(/^[^\x21-\x7e]+/, '') // remove leading invalid characters
+				.replace(/[^\x21-\x7e]+$/, '') // remove trailing invalid characters
+			;
+		}
+		return '';
+	};
+	const sanitize = ( ) => {
+		let elems = [];
+		try {
+			elems = document.querySelectorAll(selector);
+		}
+		catch(ex) {
+			return false;
+		}
+		for ( const elem of elems ) {
+			if ( elem.localName !== 'a' ) { continue; }
+			if ( elem.hasAttribute('href') === false ) { continue; }
+			const href = elem.getAttribute('href');
+			const text = extractText(elem, source);
+			const hrefAfter = validateURL(text);
+			if ( hrefAfter === '' ) { continue; }
+			if ( hrefAfter === href ) { continue; }
+			elem.setAttribute('href', hrefAfter);
+			const count = sanitizeCopycats(href, hrefAfter);
+			log(`Sanitized ${count+1} links to\n${hrefAfter}`);
+		}
+		return true;
+	};
+	let observer, timer;
+	const onDomChanged = mutations => {
+		if ( timer !== undefined ) { return; }
+		let shouldSanitize = false;
+		for ( const mutation of mutations ) {
+			if ( mutation.addedNodes.length === 0 ) { continue; }
+			for ( const node of mutation.addedNodes ) {
+				if ( node.nodeType !== 1 ) { continue; }
+				shouldSanitize = true;
+				break;
+			}
+			if ( shouldSanitize ) { break; }
+		}
+		if ( shouldSanitize === false ) { return; }
+		timer = self.requestIdleCallback(( ) => {
+			timer = undefined;
+			sanitize();
+		});
+	};
+	const start = ( ) => {
+		if ( sanitize() === false ) { return; }
+		observer = new MutationObserver(onDomChanged);
+		observer.observe(document.body, {
+			subtree: true,
+			childList: true,
+		});
+	};
+	runAt(( ) => { start(); }, 'interactive');
+}
+
+
 # Replace text instance(s) with another text instance inside specific
 # DOM nodes. By default, the scriplet stops and quits at the interactive
 # stage of a document.
