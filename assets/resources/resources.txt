@@ -3016,6 +3016,189 @@ function(rawPrunePaths, rawNeedlePaths) {
 }
 
 
+xml-prune.js application/javascript
+function(selector, selectorCheck, urlPattern) {
+	'use strict';
+	const scriptletGlobals = {};
+	function safeSelf() {
+		if ( scriptletGlobals.safeSelf ) {
+			return scriptletGlobals.safeSelf;
+		}
+		const self = window;
+		const safe = {
+			'Object_fromEntries': Object.fromEntries.bind(Object),
+			escapeRegexChars(s) {
+				return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+			},
+			patternToRegex(pattern, flags = undefined, verbatim = false) {
+				if ( pattern === '' ) { return /^/; }
+				const match = /^\/(.+)\/([gimsu]*)$/.exec(pattern);
+				if ( match === null ) {
+					const reStr = this.escapeRegexChars(pattern);
+					return new RegExp(verbatim ? `^${reStr}$` : reStr, flags);
+				}
+				try {
+					return new RegExp(match[1], match[2] || undefined);
+				}
+				catch(ex) {
+				}
+				return /^/;
+			},
+			getExtraArgs(args, offset = 0) {
+				const entries = args.slice(offset).reduce((out, v, i, a) => {
+					if ( (i & 1) === 0 ) {
+						const rawValue = a[i+1];
+						const value = /^\d+$/.test(rawValue)
+							? parseInt(rawValue, 10)
+							: rawValue;
+						out.push([ a[i], value ]);
+					}
+					return out;
+				}, []);
+				return this.Object_fromEntries(entries);
+			},
+		};
+		scriptletGlobals.safeSelf = safe;
+		return safe;
+	}
+	function makeLogPrefix(...args) {
+		return `uBO: [${args.join(' \u205D ')}]` || '';
+	}
+	if ( selector === undefined || selector === '' ) { return; }
+	if ( selectorCheck === undefined ) { selectorCheck = ''; }
+	if ( urlPattern === undefined ) { urlPattern = ''; }
+	const safe = safeSelf();
+	const logPrefix = makeLogPrefix('xml-prune', selector, selectorCheck, urlPattern);
+	const log = console.log.bind(console, logPrefix);
+	const logErr = console.error.bind(console, logPrefix);
+	const reUrl = safe.patternToRegex(urlPattern);
+	const extraArgs = safe.getExtraArgs(Array.from(arguments), 3);
+	const queryAll = (xmlDoc, selector) => {
+		const isXpath = /^xpath\(.+\)$/.test(selector);
+		if ( isXpath === false ) {
+			return Array.from(xmlDoc.querySelectorAll(selector));
+		}
+		const xpr = xmlDoc.evaluate(
+			selector.slice(6, -1),
+			xmlDoc,
+			null,
+			XPathResult.UNORDERED_NODE_SNAPSHOT_TYPE,
+			null
+		);
+		const out = [];
+		for ( let i = 0; i < xpr.snapshotLength; i++ ) {
+			const node = xpr.snapshotItem(i);
+			out.push(node);
+		}
+		return out;
+	};
+	const pruneFromDoc = xmlDoc => {
+		try {
+			if ( selectorCheck !== '' && xmlDoc.querySelector(selectorCheck) === null ) {
+				return xmlDoc;
+			}
+			if ( extraArgs.logdoc ) {
+				const serializer = new XMLSerializer();
+				log(`Document is\n\t${serializer.serializeToString(xmlDoc)}`);
+			}
+			const items = queryAll(xmlDoc, selector);
+			if ( items.length === 0 ) { return xmlDoc; }
+			log(`Removing ${items.length} items`);
+			for ( const item of items ) {
+				if ( item.nodeType === 1 ) {
+					item.remove();
+				} else if ( item.nodeType === 2 ) {
+					item.ownerElement.removeAttribute(item.nodeName);
+				}
+				log(`${item.constructor.name}.${item.nodeName} removed`);
+			}
+		} catch(ex) {
+			logErr(`Error: ${ex}`);
+		}
+		return xmlDoc;
+	};
+	const pruneFromText = text => {
+		if ( (/^\s*</.test(text) && />\s*$/.test(text)) === false ) {
+			return text;
+		}
+		try {
+			const xmlParser = new DOMParser();
+			const xmlDoc = xmlParser.parseFromString(text, 'text/xml');
+			pruneFromDoc(xmlDoc);
+			const serializer = new XMLSerializer();
+			text = serializer.serializeToString(xmlDoc);
+		} catch(ex) {
+		}
+		return text;
+	};
+	const urlFromArg = arg => {
+		if ( typeof arg === 'string' ) { return arg; }
+		if ( arg instanceof Request ) { return arg.url; }
+		return String(arg);
+	};
+	self.fetch = new Proxy(self.fetch, {
+		apply: function(target, thisArg, args) {
+			const fetchPromise = Reflect.apply(target, thisArg, args);
+			if ( reUrl.test(urlFromArg(args[0])) === false ) {
+				return fetchPromise;
+			}
+			return fetchPromise.then(responseBefore => {
+				const response = responseBefore.clone();
+				return response.text().then(text => {
+					const responseAfter = new Response(pruneFromText(text), {
+						status: responseBefore.status,
+						statusText: responseBefore.statusText,
+						headers: responseBefore.headers,
+					});
+					Object.defineProperties(responseAfter, {
+						ok: { value: responseBefore.ok },
+						redirected: { value: responseBefore.redirected },
+						type: { value: responseBefore.type },
+						url: { value: responseBefore.url },
+					});
+					return responseAfter;
+				}).catch(( ) =>
+					responseBefore
+				);
+			});
+		}
+	});
+	self.XMLHttpRequest.prototype.open = new Proxy(self.XMLHttpRequest.prototype.open, {
+		apply: async (target, thisArg, args) => {
+			if ( reUrl.test(urlFromArg(args[1])) === false ) {
+				return Reflect.apply(target, thisArg, args);
+			}
+			thisArg.addEventListener('readystatechange', function() {
+				if ( thisArg.readyState !== 4 ) { return; }
+				const type = thisArg.responseType;
+				if (
+					type === 'document' ||
+					type === '' && thisArg.responseXML instanceof XMLDocument
+				) {
+					pruneFromDoc(thisArg.responseXML);
+					const serializer = new XMLSerializer();
+					const textout = serializer.serializeToString(thisArg.responseXML);
+					Object.defineProperty(thisArg, 'responseText', { value: textout });
+					return;
+				}
+				if (
+					type === 'text' ||
+					type === '' && typeof thisArg.responseText === 'string'
+				) {
+					const textin = thisArg.responseText;
+					const textout = pruneFromText(textin);
+					if ( textout === textin ) { return; }
+					Object.defineProperty(thisArg, 'response', { value: textout });
+					Object.defineProperty(thisArg, 'responseText', { value: textout });
+					return;
+				}
+			});
+			return Reflect.apply(target, thisArg, args);
+		}
+	});
+}
+
+
 # https://github.com/uBlockOrigin/uAssets/issues/521
 # https://github.com/uBlockOrigin/uAssets/issues/9123#issuecomment-848255120
 addEventListener-defuser.js application/javascript
