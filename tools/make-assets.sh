@@ -17,16 +17,25 @@ mkdir $DES
 cp    ./assets/assets.json                                       $DES/
 
 mkdir $DES/thirdparties
-cp -R ../uAssets/thirdparties/easylist-downloads.adblockplus.org $DES/thirdparties/
-cp -R ../uAssets/thirdparties/pgl.yoyo.org                       $DES/thirdparties/
-cp -R ../uAssets/thirdparties/publicsuffix.org                   $DES/thirdparties/
-cp -R ../uAssets/thirdparties/urlhaus-filter                     $DES/thirdparties/
+wget https://easylist.to/easylist/easylist.txt                                         -P $DES/thirdparties/easylist/
+wget https://easylist.to/easylist/easyprivacy.txt                                      -P $DES/thirdparties/easylist/
+# EasyList (Optimized)
+wget https://filters.adtidy.org/extension/ublock/filters/101_optimized.txt             -P $DES/thirdparties/easylist/
+# EasyPrivacy (Optimized)
+wget https://filters.adtidy.org/extension/ublock/filters/118_optimized.txt             -P $DES/thirdparties/easylist/
+cp -R ../uAssets/thirdparties/pgl.yoyo.org                                                $DES/thirdparties/
+cp -R ../uAssets/thirdparties/publicsuffix.org                                            $DES/thirdparties/
+cp -R ../uAssets/thirdparties/urlhaus-filter                                              $DES/thirdparties/
 
 mkdir $DES/ublock
-cp -R ../uAssets/filters/*                                       $DES/ublock/
+find ../uAssets/filters/ -type f -name "*.txt" \
+                               ! -name "annoyances*.txt" \
+                               ! -name "badlists.txt" \
+                               ! -name "lan-block.txt" \
+                               ! -name "legacy.txt" \
+                               ! -name "ubol-filters.txt" \
+                                                     -exec cp {} $DES/ublock \;
 cp    ./assets/resources/resources.txt                           $DES/ublock/
-# Optional and obsolete filter lists: do not include in package
-rm    $DES/ublock/annoyances.txt
-rm    $DES/ublock/badlists.txt
+cp    ./assets/resources/legacy.txt                              $DES/ublock/
 
 echo "done."

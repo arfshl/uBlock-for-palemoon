@@ -48,7 +48,7 @@
 		"group": "default",
 		"title": "uBlock filters – Legacy",
 		"contentURL": [
-			"https://ublockorigin.github.io/uAssets/filters/legacy.txt",
+			"https://raw.githubusercontent.com/UCyborg/uBlock-for-firefox-legacy/master/assets/resources/legacy.txt",
 			"assets/ublock/legacy.txt"
 		],
 		"supportURL": "https://github.com/uBlockOrigin/uAssets/issues"
@@ -125,7 +125,7 @@
 			"https://easylist.to/easylist/easylist.txt",
 			"https://secure.fanboy.co.nz/easylist.txt",
 			"https://easylist-downloads.adblockplus.org/easylist.txt",
-			"assets/thirdparties/easylist-downloads.adblockplus.org/easylist.txt"
+			"assets/thirdparties/easylist/easylist.txt"
 		],
 		"supportURL": "https://easylist.to/"
 	},
@@ -136,7 +136,7 @@
 		"title": "EasyList (Optimized)",
 		"contentURL": [
 			"https://filters.adtidy.org/extension/ublock/filters/101_optimized.txt",
-			"assets/thirdparties/easylist-downloads.adblockplus.org/101_optimized.txt"
+			"assets/thirdparties/easylist/101_optimized.txt"
 		],
 		"supportURL": "https://github.com/AdguardTeam/AdguardFilters"
 	},
@@ -157,7 +157,7 @@
 			"https://easylist.to/easylist/easyprivacy.txt",
 			"https://secure.fanboy.co.nz/easyprivacy.txt",
 			"https://easylist-downloads.adblockplus.org/easyprivacy.txt",
-			"assets/thirdparties/easylist-downloads.adblockplus.org/easyprivacy.txt"
+			"assets/thirdparties/easylist/easyprivacy.txt"
 		],
 		"supportURL": "https://forums.lanik.us/"
 	},
@@ -168,7 +168,7 @@
 		"title": "EasyPrivacy (Optimized)",
 		"contentURL": [
 			"https://filters.adtidy.org/extension/ublock/filters/118_optimized.txt",
-			"assets/thirdparties/easylist-downloads.adblockplus.org/118_optimized.txt"
+			"assets/thirdparties/easylist/118_optimized.txt"
 		],
 		"supportURL": "https://github.com/AdguardTeam/AdguardFilters"
 	},
