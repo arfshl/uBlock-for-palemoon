@@ -2,9 +2,9 @@
 
 ### Firefox legacy
 
-Compatible with Firefox 24-56, [Pale Moon](https://www.palemoon.org/) and [SeaMonkey](http://www.seamonkey-project.org/).
+Compatible with Firefox 44-56, [Pale Moon](https://www.palemoon.org/) and [SeaMonkey](http://www.seamonkey-project.org/).
 
-- Download `ublock0.firefox-legacy.xpi` ([latest release desirable](https://github.com/gorhill/uBlock-for-firefox-legacy/releases)).
+- Download `ublock0.firefox-legacy.xpi` ([latest release desirable](https://github.com/UCyborg/uBlock-for-firefox-legacy/releases)).
     - Right-click and select "Save Link As..."
 - Drag and drop the previously downloaded `ublock0.firefox-legacy.xpi` into the browser.
 
@@ -18,8 +18,8 @@ On Windows, the settings are saved in a SQlite file located at `%APPDATA%\Mozill
 
 ### Build instructions (for developers)
 
-- Clone [uBlock](https://github.com/gorhill/uBlock-for-firefox-legacy) and [uAssets](https://github.com/uBlockOrigin/uAssets) repositories in the same parent directory
-    - `git clone https://github.com/gorhill/uBlock-for-firefox-legacy.git`
+- Clone [uBlock](https://github.com/UCyborg/uBlock-for-firefox-legacy) and [uAssets](https://github.com/uBlockOrigin/uAssets) repositories in the same parent directory
+    - `git clone https://github.com/UCyborg/uBlock-for-firefox-legacy.git`
     - `git clone https://github.com/uBlockOrigin/uAssets.git`
 - Set path to uBlock: `cd uBlock-for-firefox-legacy`
 - The official version of uBO is in the `master` branch

@@ -1,12 +1,10 @@
-[![Build](https://travis-ci.org/gorhill/uBlock.svg?branch=master)](https://travis-ci.org/gorhill/uBlock)
-[![Crowdin](https://d322cqt584bo4o.cloudfront.net/ublock/localized.svg)](https://crowdin.com/project/ublock)
-[![License](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://github.com/gorhill/uBlock/blob/master/LICENSE.txt)
+[![License](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://github.com/UCyborg/uBlock-for-firefox-legacy/blob/master/LICENSE.txt)
 
 *** 
 
 <h1 align="center">
 <sub>
-<img  src="https://raw.githubusercontent.com/gorhill/uBlock/master/doc/img/icon38@2x.png"
+<img  src="https://raw.githubusercontent.com/UCyborg/uBlock-for-firefox-legacy/master/doc/img/icon38@2x.png"
       height="38"
       width="38">
 </sub>
@@ -18,7 +16,7 @@ uBlock Origin
 </sup>
 <br>
 <sup> <!-- Languages -->
-      <img src="https://raw.githubusercontent.com/gorhill/uBlock/master/doc/img/languageicon-36.png" width="18" height="18">
+      <img src="https://raw.githubusercontent.com/UCyborg/uBlock-for-firefox-legacy/master/doc/img/languageicon-36.png" width="18" height="18">
       <sup>
             English,
             <a href="https://github.com/fang5566/uBlock/blob/master/README.md#ublock-origin">Chinese (中文)</a>,
@@ -97,15 +95,15 @@ Firefox<br>
 
 <p align="center">
 uBlock Origin is also easy on the CPU<br>
-<img src="https://raw.githubusercontent.com/gorhill/uBlock/master/doc/benchmarks/cpu-usage-overall-chart-20141226.png" /><br>
-<sup>Details of the benchmark available in <a href="https://github.com/gorhill/uBlock/blob/master/doc/benchmarks/cpu-usage-overall-20141226.ods">this LibreOffice spreadsheet</a>.</sup>
+<img src="https://raw.githubusercontent.com/UCyborg/uBlock-for-firefox-legacy/master/doc/benchmarks/cpu-usage-overall-chart-20141226.png" /><br>
+<sup>Details of the benchmark available in <a href="https://github.com/UCyborg/uBlock-for-firefox-legacy/blob/master/doc/benchmarks/cpu-usage-overall-20141226.ods">this LibreOffice spreadsheet</a>.</sup>
 </p>
 
 #### Blocking
 
 <p align="center">
 Being lean and efficient doesn't mean blocking less<br>
-<img src="https://raw.githubusercontent.com/gorhill/uBlock/master/doc/benchmarks/privex-201502-16.png" /><br>
+<img src="https://raw.githubusercontent.com/UCyborg/uBlock-for-firefox-legacy/master/doc/benchmarks/privex-201502-16.png" /><br>
 <sup>For details of benchmark, see 
 <a href="https://github.com/gorhill/uBlock/wiki/uBlock-and-others%3A-Blocking-ads%2C-trackers%2C-malwares">uBlock₀ and others: Blocking ads, trackers, malwares</a>.
 </p>
@@ -128,7 +126,7 @@ It is expected that uBlock Origin is compatible with any Chromium-based browsers
 
 There is also a development version if you want to test uBlock Origin with the latest changes: for installation, see [Install / Firefox webext / For beta version](https://github.com/gorhill/uBlock/blob/master/dist/README.md#for-beta-version)
 
-uBlock Origin is compatible with [SeaMonkey](http://www.seamonkey-project.org/), [Pale Moon](https://www.palemoon.org/), and possibly other browsers based on Firefox: for installation, see [Install / Firefox legacy](https://github.com/gorhill/uBlock/blob/master/dist/README.md#firefox-legacy).
+uBlock Origin is compatible with [SeaMonkey](http://www.seamonkey-project.org/), [Pale Moon](https://www.palemoon.org/), and possibly other browsers based on Firefox: for installation, see [Install / Firefox legacy](https://github.com/UCyborg/uBlock-for-firefox-legacy/blob/master/dist/README.md#firefox-legacy).
 
 Thanks to Debian contributor [Sean Whitton](https://wiki.debian.org/SeanWhitton), users of Debian 9 or later or Ubuntu 16.04 or later may simply
 `apt-get install xul-ext-ublock-origin`.
@@ -165,7 +163,7 @@ Below is documentation to assist administrators in deploying uBlock Origin:
 
 ## Release History
 
-See the [releases pages](https://github.com/gorhill/uBlock/releases) for a history of releases and highlights for each release.
+See the [releases pages](https://github.com/UCyborg/uBlock-for-firefox-legacy/releases) for a history of releases and highlights for each release.
 
 ## About
 
@@ -182,4 +180,4 @@ You can contribute by helping translate uBlock₀ [on Crowdin](https://crowdin.n
 
 ## License
 
-[GPLv3](https://github.com/gorhill/uBlock/blob/master/LICENSE.txt).
+[GPLv3](https://github.com/UCyborg/uBlock-for-firefox-legacy/blob/master/LICENSE.txt).
