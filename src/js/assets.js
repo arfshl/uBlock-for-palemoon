@@ -171,7 +171,7 @@ api.fetchText = function(url, onLoad, onError) {
 // https://github.com/gorhill/uBlock/issues/3331
 //   Support the seamless loading of sublists.
 
-api.fetchFilterList = function(mainlistURL, convert, onLoad, onError) {
+api.fetchFilterList = function(mainlistURL, onLoad, onError) {
     const content = [];
     const pendingSublistURLs = new Set([ mainlistURL ]);
     const loadedSublistURLs = new Set();
@@ -258,11 +258,6 @@ api.fetchFilterList = function(mainlistURL, convert, onLoad, onError) {
 
         details.url = mainlistURL;
         details.content = content.join('\n').trim();
-
-        if ( convert ) {
-            details.content = api.fetchFilterList.legacy.convert(details.content);
-        }
-
         onLoad(details);
     };
 
@@ -286,114 +281,6 @@ api.fetchFilterList.toParsedURL = function(url) {
     try {
         return new URL(url);
     } catch (ex) {
-    }
-};
-
-api.fetchFilterList.legacy = {
-    mapRules: {
-        '=1x1.gif': '=1x1-transparent.gif',
-        '=2x2.png': '=2x2-transparent.png',
-        '=3x2.png': '=3x2-transparent.png',
-        '=32x32.png': '=32x32-transparent.png',
-        '=addthis_widget.js': '=addthis.com/addthis_widget.js',
-        '=ampproject_v0.js': '=ampproject.org/v0.js',
-        '=chartbeat.js': '=static.chartbeat.com/chartbeat.js',
-        '=amazon_ads.js': '=amazon-adsystem.com/aax2/amzn_ads.js',
-        '=disqus_embed.js': '=disqus.com/embed.js',
-        '=disqus_forums_embed.js': '=disqus.com/forums/*/embed.js',
-        '=doubleclick_instream_ad_status.js': '=doubleclick.net/instream/ad_status.js',
-        '=google-analytics_analytics.js': '=google-analytics.com/analytics.js',
-        '=google-analytics_cx_api.js': '=google-analytics.com/cx/api.js',
-        '=google-analytics_ga.js': '=google-analytics.com/ga.js',
-        '=google-analytics_inpage_linkid.js': '=google-analytics.com/inpage_linkid.js',
-        '=googlesyndication_adsbygoogle.js': '=googlesyndication.com/adsbygoogle.js',
-        '=googletagmanager_gtm.js': '=google-analytics.com/analytics.js',
-        '=googletagmanager.com/gtm.js': '=google-analytics.com/analytics.js',
-        '=googletagservices_gpt.js': '=googletagservices.com/gpt.js',
-        '=ligatus_angular-tag.js': '=ligatus.com/*/angular-tag.js',
-        '=monkeybroker.js': '=d3pkae9owd2lcf.cloudfront.net/mb105.js',
-        '=noop-0.1s.mp3': '=noopmp3-0.1s',
-        '=noop-1s.mp4': '=noopmp4-1s',
-        '=noop.html': '=noopframe',
-        '=outbrain-widget.js': '=widgets.outbrain.com/outbrain.js',
-        '=scorecardresearch_beacon.js': '=scorecardresearch.com/beacon.js',
-        '=noeval-silent.js': '=silent-noeval.js',
-        '=silent-noeval': '=silent-noeval.js',
-        '=noop.js': '=noopjs',
-        '=noop.txt': '=nooptext',
-        '=noop-vmap1.0.xml': '=noopvmap-1.0',
-        '=popads.js': '=popads.net.js',
-        '(popads.js)': '(popads.net.js)',
-        '(popads)': '(popads.net.js)',
-        '(nobab)': '(bab-defuser.js)',
-        '(nofab)': '(fuckadblock.js-3.2.0)',
-        '(acis,': '(abort-current-inline-script.js,',
-        '(acis.js,': '(abort-current-inline-script.js,',
-        '(abort-current-inline-script,': '(abort-current-inline-script.js,',
-        '(aopr,': '(abort-on-property-read.js,',
-        '(aopr.js,': '(abort-on-property-read.js,',
-        '(abort-on-property-read,': '(abort-on-property-read.js,',
-        '(aopw,': '(abort-on-property-write.js,',
-        '(aopw.js,': '(abort-on-property-write.js,',
-        '(abort-on-property-write,': '(abort-on-property-write.js,',
-        '(aost,': '(abort-on-stack-trace.js,',
-        '(aost.js,': '(abort-on-stack-trace.js,',
-        '(abort-on-stack-trace,': '(abort-on-stack-trace.js,',
-        '(aeld,': '(addEventListener-defuser.js,',
-        '(aeld)': '(addEventListener-defuser.js)',
-        '(addEventListener-defuser,': '(addEventListener-defuser.js,',
-        '(addEventListener-defuser)': '(addEventListener-defuser.js)',
-        '(aell,': '(addEventListener-logger.js,',
-        '(aell)': '(addEventListener-logger.js)',
-        '(addEventListener-logger,': '(addEventListener-logger.js,',
-        '(addEventListener-logger)': '(addEventListener-logger.js)',
-        '(nano-sib,': '(nano-setInterval-booster.js,',
-        '(nano-sib)': '(nano-setInterval-booster.js)',
-        '(nano-sib.js,': '(nano-setInterval-booster.js,',
-        '(nano-sib.js)': '(nano-setInterval-booster.js)',
-        '(nano-setInterval-booster,': '(nano-setInterval-booster.js,',
-        '(nano-setInterval-booster)': '(nano-setInterval-booster.js)',
-        '(nano-stb,': '(nano-setTimeout-booster.js,',
-        '(nano-stb)': '(nano-setTimeout-booster.js)',
-        '(nano-stb.js,': '(nano-setTimeout-booster.js,',
-        '(nano-stb.js)': '(nano-setTimeout-booster.js)',
-        '(nano-setTimeout-booster,': '(nano-setTimeout-booster.js,',
-        '(nano-setTimeout-booster)': '(nano-setTimeout-booster.js)',
-        '(ra,': '(remove-attr.js,',
-        '(rc,': '(remove-class.js,',
-        '(remove-attr,': '(remove-attr.js,',
-        '(sid,': '(setInterval-defuser.js,',
-        '(nosiif,': '(no-setInterval-if.js,',
-        '(nosiif)': '(no-setInterval-if.js)',
-        '(std,': '(setTimeout-defuser.js,',
-        '(setTimeout-defuser,': '(setTimeout-defuser.js,',
-        '(nostif,': '(no-setTimeout-if.js,',
-        '(nostif)': '(no-setTimeout-if.js)',
-        '(window.open-defuser,': '(window.open-defuser.js,',
-        '(window.open-defuser)': '(window.open-defuser.js)',
-        '(nowoif,': '(window.open-defuser.js,',
-        '(nowoif)': '(window.open-defuser.js)',
-        '(no-fetch-if,': '(no-fetch-if.js,',
-        '(json-prune,': '(json-prune.js,',
-        '(json-prune)': '(json-prune.js)',
-        '(set,': '(set-constant.js,',
-        '(set-constant,': '(set-constant.js,',
-        '(cookie-remover,': '(cookie-remover.js,',
-        '(raf-if,': '(requestAnimationFrame-if.js,',
-        '(norafif,': '(no-requestAnimationFrame-if.js,',
-        '(noeval)': '(noeval.js)',
-        '(nowebrtc)': '(nowebrtc.js)'
-    },
-    get regexRules() {
-        delete this.regexRules;
-        return this.regexRules = new RegExp(Object.keys(this.mapRules)
-            .join('|').replace(/[().]/g, '\\$&'), 'g');
-    },
-    convert: function(content) {
-        var that = this;
-        return content.replace(this.regexRules, function(matched) {
-                return that.mapRules[matched];
-            });
     }
 };
 
@@ -894,8 +781,7 @@ api.get = function(assetKey, options, callback) {
             return reportBack('', 'E_NOTFOUND');
         }
         if ( assetDetails.content === 'filters' ) {
-            api.fetchFilterList(contentURL, !assetDetails.noConvert,
-                                onContentLoaded, onContentNotLoaded);
+            api.fetchFilterList(contentURL, onContentLoaded, onContentNotLoaded);
         } else {
             api.fetchText(contentURL, onContentLoaded, onContentNotLoaded);
         }
@@ -983,8 +869,7 @@ var getRemote = function(assetKey, callback) {
             return reportBack('', 'E_NOTFOUND');
         }
         if ( assetDetails.content === 'filters' ) {
-            api.fetchFilterList(contentURL, !assetDetails.noConvert,
-                                onRemoteContentLoaded, onRemoteContentError);
+            api.fetchFilterList(contentURL, onRemoteContentLoaded, onRemoteContentError);
         } else {
             api.fetchText(contentURL, onRemoteContentLoaded, onRemoteContentError);
         }
@@ -1006,12 +891,6 @@ var getRemote = function(assetKey, callback) {
 /******************************************************************************/
 
 api.put = function(assetKey, content, callback) {
-    if (
-        µBlock.hiddenSettings.assetConvertMyFilters &&
-        assetKey === µBlock.userFiltersPath
-    ) {
-        content = api.fetchFilterList.legacy.convert(content);
-    }
     if ( reIsUserAsset.test(assetKey) ) {
         return saveUserAsset(assetKey, content, callback);
     }

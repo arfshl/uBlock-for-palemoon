@@ -52,6 +52,9 @@
                 token = raw.slice(0, pos).trim();
                 args = raw.slice(pos + 1).trim();
             }
+            if ( !token.endsWith('.js') ) {
+                token += '.js';
+            }
             content = reng.resourceContentFromName(token, 'application/javascript');
             if ( !content ) { return; }
             if ( args ) {

@@ -139,11 +139,6 @@ var onVersionReady = function(lastVersion) {
     // https://github.com/gorhill/uBlock-for-firefox-legacy/issues/134
     µb.assets.purge('ublock-resources');
 
-    // Force updating all filters due to filter syntax converter update.
-    if ( vAPI.app.compareVersions(lastVersion, "1.16.4.28") <= 0 ) {
-        µb.assets.purge(/./, 'public_suffix_list.dat');
-    }
-
     vAPI.storage.set({ version: vAPI.app.version });
 };
 

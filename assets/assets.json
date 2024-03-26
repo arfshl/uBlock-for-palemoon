@@ -104,7 +104,6 @@
 	"easylist": {
 		"content": "filters",
 		"group": "ads",
-		"noConvert": true,
 		"title": "EasyList",
 		"contentURL": [
 			"https://easylist.to/easylist/easylist.txt",
@@ -118,7 +117,6 @@
 		"content": "filters",
 		"group": "privacy",
 		"off": true,
-		"noConvert": false,
 		"title": "AdGuard Tracking Protection",
 		"contentURL": "https://filters.adtidy.org/extension/ublock/filters/3.txt",
 		"supportURL": "https://github.com/AdguardTeam/AdguardFilters#adguard-filters",
@@ -127,7 +125,6 @@
 	"easyprivacy": {
 		"content": "filters",
 		"group": "privacy",
-		"noConvert": true,
 		"title": "EasyPrivacy",
 		"contentURL": [
 			"https://easylist.to/easylist/easyprivacy.txt",
@@ -140,7 +137,6 @@
 	"urlhaus-1": {
 		"content": "filters",
 		"group": "malware",
-		"noConvert": true,
 		"title": "Online Malicious URL Blocklist",
 		"contentURL": [
 			"https://curben.gitlab.io/malware-filter/urlhaus-filter-online.txt",
@@ -153,7 +149,6 @@
 		"content": "filters",
 		"group": "malware",
 		"off": true,
-		"noConvert": true,
 		"title": "Spam404",
 		"contentURL": "https://raw.githubusercontent.com/Spam404/lists/master/adblock-list.txt",
 		"supportURL": "http://www.spam404.com/"
@@ -171,7 +166,6 @@
 		"content": "filters",
 		"group": "social",
 		"off": true,
-		"noConvert": false,
 		"title": "AdGuard Social Media",
 		"contentURL": "https://filters.adtidy.org/extension/ublock/filters/4.txt",
 		"supportURL": "https://github.com/AdguardTeam/AdguardFilters#adguard-filters",
@@ -181,7 +175,6 @@
 		"content": "filters",
 		"group": "social",
 		"off": true,
-		"noConvert": true,
 		"title": "Anti-Facebook",
 		"contentURL": "https://secure.fanboy.co.nz/fanboy-antifacebook.txt",
 		"supportURL": "https://github.com/ryanbr/fanboy-adblock/issues"
@@ -190,7 +183,6 @@
 		"content": "filters",
 		"group": "social",
 		"off": true,
-		"noConvert": false,
 		"title": "Fanboy’s Annoyance",
 		"contentURL": "https://secure.fanboy.co.nz/fanboy-annoyance.txt",
 		"supportURL": "https://forums.lanik.us/"
@@ -199,7 +191,6 @@
 		"content": "filters",
 		"group": "social",
 		"off": true,
-		"noConvert": false,
 		"title": "EasyList Cookie",
 		"contentURL": "https://secure.fanboy.co.nz/fanboy-cookiemonster.txt",
 		"supportURL": "https://github.com/easylist/easylist/issues"
@@ -208,7 +199,6 @@
 		"content": "filters",
 		"group": "social",
 		"off": true,
-		"noConvert": false,
 		"title": "Fanboy’s Social",
 		"contentURL": [
 			"https://easylist.to/easylist/fanboy-social.txt",
@@ -228,7 +218,6 @@
 		"group": "multipurpose",
 		"updateAfter": 11,
 		"off": true,
-		"noConvert": true,
 		"title": "Dan Pollock’s hosts file",
 		"contentURL": "https://someonewhocares.org/hosts/hosts",
 		"supportURL": "https://someonewhocares.org/hosts/"
@@ -238,7 +227,6 @@
 		"group": "multipurpose",
 		"updateAfter": 11,
 		"off": true,
-		"noConvert": true,
 		"title": "MVPS HOSTS",
 		"contentURL": "https://winhelp2002.mvps.org/hosts.txt",
 		"supportURL": "https://winhelp2002.mvps.org/"
@@ -247,7 +235,6 @@
 		"content": "filters",
 		"group": "multipurpose",
 		"updateAfter": 13,
-		"noConvert": true,
 		"title": "Peter Lowe’s Ad and tracking server list",
 		"contentURL": [
 			"https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&showintro=1&mimetype=plaintext",

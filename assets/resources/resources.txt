@@ -2,50 +2,65 @@
 #
 # - Each distinct resource entry is separated by an empty line.
 # - The first line in a resource entry is: token mime-type[;encoding]
+# - Optional aliases may follow, one per line: alias alternativetoken
 # - All following lines are the data. An empty line signals the end of the
 #   data.
 #
+# Mind that application/javascript scriptlet resources' names/aliases always end with: .js
+#
 # If the encoding is absent, the data will be converted to base64, and the
 # encoding will be set to `;base64`.
+#
+# Put comments only before metadata or after the line signaling the end of data.
 
 
 # http://probablyprogramming.com/2009/03/15/the-tiniest-gif-ever
-1x1-transparent.gif image/gif;base64
+1x1.gif image/gif;base64
+alias 1x1-transparent.gif
 R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==
 
 
-2x2-transparent.png image/png;base64
+2x2.png image/png;base64
+alias 2x2-transparent.png
 iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAC0lEQVQI12NgQAcAABIAAe+JVKQAAAAA
 SUVORK5CYII=
 
 
-3x2-transparent.png image/png;base64
+3x2.png image/png;base64
+alias 3x2-transparent.png
 iVBORw0KGgoAAAANSUhEUgAAAAMAAAACCAYAAACddGYaAAAAC0lEQVQI12NgwAUAABoAASRETuUAAAAA
 SUVORK5CYII=
 
 
-32x32-transparent.png image/png;base64
+32x32.png image/png;base64
+alias 32x32-transparent.png
 iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAGklEQVRYw+3BAQEAAACCIP+vbkhAAQAA
 AO8GECAAAZf3V9cAAAAASUVORK5CYII=
 
 
-nooptext text/plain
+noop.txt text/plain
+alias nooptext
 
 
-noopcss text/css
+noop.css text/css
+alias noopcss
 
 
-noopvmap-1.0 text/xml
+noop-vmap1.0.xml text/xml
+alias noopvmap-1.0
 <vmap:VMAP xmlns:vmap="http://www.iab.net/videosuite/vmap" version="1.0"></vmap:VMAP>
 
 
-noopjs application/javascript
+noop.js application/javascript
+alias noopjs
+alias abp-resource:blank-js
 (function() {
 	;
 })();
 
 
-noopframe text/html
+noop.html text/html
+alias noopframe
 <!DOCTYPE html>
 <html>
 	<head><title></title></head>
@@ -57,7 +72,9 @@ noopframe text/html
 #   https://ubuntuforums.org/showthread.php?t=1911430&p=11624471#post11624471
 # ffmpeg -ar 48000 -t 0.1 -f s16le -acodec pcm_s16le -ac 2 -i /dev/zero -acodec libmp3lame -aq 4 output.mp3
 # But with 0.1 (second) instead of 60.
-noopmp3-0.1s audio/mp3;base64
+noop-0.1s.mp3 audio/mp3;base64
+alias noopmp3-0.1s
+alias abp-resource:blank-mp3
 SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU2LjQwLjEwMQAAAAAAAAAAAAAA//tUAAAAAAAAAAAAAAAA
 AAAAAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAGAAADAABgYGBgYGBgYGBgYGBgYGBggICAgICA
 gICAgICAgICAgICgoKCgoKCgoKCgoKCgoKCgwMDAwMDAwMDAwMDAwMDAwMDg4ODg4ODg4ODg4ODg4ODg
@@ -75,7 +92,9 @@ VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
 
 # From:
 #   https://github.com/kud/blank-video
-noopmp4-1s video/mp4;base64
+noop-1s.mp4 video/mp4;base64
+alias noopmp4-1s
+alias abp-resource:blank-mp4
 AAAAHGZ0eXBNNFYgAAACAGlzb21pc28yYXZjMQAAAAhmcmVlAAAGF21kYXTeBAAAbGliZmFhYyAxLjI4
 AABCAJMgBDIARwAAArEGBf//rdxF6b3m2Ui3lizYINkj7u94MjY0IC0gY29yZSAxNDIgcjIgOTU2Yzhk
 OCAtIEguMjY0L01QRUctNCBBVkMgY29kZWMgLSBDb3B5bGVmdCAyMDAzLTIwMTQgLSBodHRwOi8vd3d3
@@ -170,7 +189,8 @@ hd-main.js application/javascript
 
 
 # fuckadblock defuser
-fuckadblock.js-3.2.0 application/javascript
+nofab.js application/javascript
+alias fuckadblock.js-3.2.0
 (function() {
 	var noopfn = function() {
 		;
@@ -223,7 +243,8 @@ fuckadblock.js-3.2.0 application/javascript
 # - https://github.com/chrisaljoudi/uBlock/issues/119
 # Reference API:
 # - https://developers.google.com/analytics/devguides/collection/gajs/
-google-analytics.com/ga.js application/javascript
+google-analytics_ga.js application/javascript
+alias google-analytics.com/ga.js
 (function() {
 	var noopfn = function() {
 		;
@@ -324,7 +345,10 @@ google-analytics.com/ga.js application/javascript
 	window._gaq = gaq.qf = gaq;
 })();
 
-google-analytics.com/analytics.js application/javascript
+google-analytics_analytics.js application/javascript
+alias google-analytics.com/analytics.js
+alias googletagmanager_gtm.js
+alias googletagmanager.com/gtm.js
 (function() {
 	// https://developers.google.com/analytics/devguides/collection/analyticsjs/
 	const noopfn = function() {
@@ -399,7 +423,8 @@ google-analytics.com/analytics.js application/javascript
 	}
 })();
 
-google-analytics.com/inpage_linkid.js application/javascript
+google-analytics_inpage_linkid.js application/javascript
+alias google-analytics.com/inpage_linkid.js
 (function() {
 	window._gaq = window._gaq || {
 		push: function() {
@@ -410,7 +435,8 @@ google-analytics.com/inpage_linkid.js application/javascript
 
 # https://github.com/gorhill/uBlock/issues/2480
 # https://developers.google.com/analytics/devguides/collection/gajs/experiments#cxjs
-google-analytics.com/cx/api.js application/javascript
+google-analytics_cx_api.js application/javascript
+alias google-analytics.com/cx/api.js
 (function() {
 	var noopfn = function() {
 	};
@@ -429,7 +455,9 @@ google-analytics.com/cx/api.js application/javascript
 # Ubiquitous googletagservices.com: not blocked by EasyPrivacy.
 # "Tags are tiny bits of website code that let you measure traffic and
 # "visitor behavior"
-googletagservices.com/gpt.js application/javascript
+googletagservices_gpt.js application/javascript
+alias googletagservices.com/gpt.js
+alias googletagservices-gpt.js
 (function() {
 	var p;
 	// https://developers.google.com/doubleclick-gpt/reference
@@ -565,38 +593,11 @@ googletagservices.com/gpt.js application/javascript
 })();
 
 
-# Obviously more work needs to be done, but at least for now it takes care of:
-# See related filter in assets/ublock/privacy.txt
-# Also:
-# - https://github.com/gorhill/uBlock/issues/2569
-# - https://github.com/uBlockOrigin/uAssets/issues/420
-googletagmanager.com/gtm.js application/javascript
-(function() {
-	var noopfn = function() {
-	};
-	var w = window;
-	w.ga = w.ga || noopfn;
-	var dl = w.dataLayer;
-	if ( dl instanceof Object === false ) { return; }
-	if ( dl.hide instanceof Object && typeof dl.hide.end === 'function' ) {
-		dl.hide.end();
-	}
-	if ( typeof dl.push === 'function' ) {
-		dl.push = function(o) {
-			if (
-				o instanceof Object &&
-				typeof o.eventCallback === 'function'
-			) {
-				setTimeout(o.eventCallback, 1);
-			}
-		};
-	}
-})();
-
-
 # https://github.com/uBlockOrigin/uAssets/issues/282
 # https://github.com/uBlockOrigin/uAssets/issues/418
-googlesyndication.com/adsbygoogle.js application/javascript
+googlesyndication_adsbygoogle.js application/javascript
+alias googlesyndication.com/adsbygoogle.js
+alias googlesyndication-adsbygoogle.js
 (function() {
 	window.adsbygoogle = {
 		loaded: true,
@@ -621,7 +622,8 @@ googlesyndication.com/adsbygoogle.js application/javascript
 
 # https://forums.lanik.us/viewtopic.php?f=91&t=27188
 # https://forums.lanik.us/viewtopic.php?f=91&t=29609
-ligatus.com/*/angular-tag.js application/javascript
+ligatus_angular-tag.js application/javascript
+alias ligatus.com/*/angular-tag.js
 (function() {
 	self.adProtect = true;
 	Object.defineProperties(window, {
@@ -631,7 +633,9 @@ ligatus.com/*/angular-tag.js application/javascript
 })();
 
 
-bab-defuser.js application/javascript
+nobab.js application/javascript
+alias bab-defuser.js
+alias prevent-bab.js
 (function() {
 	var sto = window.setTimeout,
 		re = /\.bab_elementid.$/;
@@ -677,7 +681,8 @@ bab-defuser.js application/javascript
 })();
 
 
-scorecardresearch.com/beacon.js application/javascript
+scorecardresearch_beacon.js application/javascript
+alias scorecardresearch.com/beacon.js
 (function() {
 	window.COMSCORE = {
 		purge: function() {
@@ -691,7 +696,8 @@ scorecardresearch.com/beacon.js application/javascript
 
 
 # https://github.com/gorhill/uBlock/issues/1250#issuecomment-173533894
-widgets.outbrain.com/outbrain.js application/javascript
+outbrain-widget.js application/javascript
+alias widgets.outbrain.com/outbrain.js
 (function() {
 	var noopfn = function() {
 		;
@@ -721,14 +727,15 @@ widgets.outbrain.com/outbrain.js application/javascript
 
 
 # https://github.com/gorhill/uBlock/issues/1228
-window.name-defuser application/javascript
+window.name-defuser.js application/javascript
 if ( window === window.top ) {
 	window.name = '';
 }
 
 
 # https://github.com/gorhill/uBlock/issues/897#issuecomment-180871042
-doubleclick.net/instream/ad_status.js application/javascript
+doubleclick_instream_ad_status.js application/javascript
+alias doubleclick.net/instream/ad_status.js
 window.google_ad_status = 1;
 
 
@@ -766,7 +773,8 @@ addthis.com/addthis_widget.js application/javascript
 # @@||wired.disqus.com/embed.js
 
 # Sometimes a site will use this one script:
-disqus.com/forums/*/embed.js application/javascript
+disqus_forums_embed.js application/javascript
+alias disqus.com/forums/*/embed.js
 (function() {
 	var ee = document.getElementsByTagName('script');
 	var i = ee.length, src;
@@ -786,7 +794,8 @@ disqus.com/forums/*/embed.js application/javascript
 })();
 
 # Most use this one though:
-disqus.com/embed.js application/javascript
+disqus_embed.js application/javascript
+alias disqus.com/embed.js
 (function() {
 	var p = document.getElementById(window.disqus_container_id || 'disqus_thread');
 	if ( p === null ) {
@@ -811,7 +820,8 @@ disqus.com/embed.js application/javascript
 })();
 
 
-amazon-adsystem.com/aax2/amzn_ads.js application/javascript
+amazon_ads.js application/javascript
+alias amazon-adsystem.com/aax2/amzn_ads.js
 (function() {
 	if ( amznads ) {
 		return;
@@ -959,7 +969,8 @@ noeval.js application/javascript
 	}.bind(window);
 })();
 
-silent-noeval.js application/javascript
+noeval-silent.js application/javascript
+alias silent-noeval.js
 (function() {
 	window.eval = function(s) {
 		;
@@ -967,6 +978,7 @@ silent-noeval.js application/javascript
 })();
 
 noeval-if.js application/javascript
+alias prevent-eval-if.js
 (function() {
 	var needle = '{{1}}';
 	if ( needle === '' || needle === '{{1}}' ) {
@@ -1044,7 +1056,9 @@ golem.de.js application/javascript
 
 
 # https://www.reddit.com/r/firefox/comments/4wpd23/popads_just_announced_that_they_have_a_new_method/
-popads.net.js application/javascript
+popads.js application/javascript
+alias popads.net.js
+alias prevent-popads-net.js
 (function() {
 	var magic = String.fromCharCode(Date.now() % 26 + 97) +
 				Math.floor(Math.random() * 982451653 + 982451653).toString(36),
@@ -1128,7 +1142,8 @@ d3pkae9owd2lcf.cloudfront.net/mb105.js application/javascript
 
 
 # https://twitter.com/Scarbir/status/785551814460571648
-static.chartbeat.com/chartbeat.js application/javascript
+chartbeat.js application/javascript
+alias static.chartbeat.com/chartbeat.js
 (function() {
 	var noopfn = function(){};
 	window.pSUPERFLY = {
@@ -1140,6 +1155,7 @@ static.chartbeat.com/chartbeat.js application/javascript
 
 # https://github.com/gorhill/uBlock/issues/2132
 abort-on-property-write.js application/javascript
+alias aopw.js
 (function() {
 	var magic = String.fromCharCode(Date.now() % 26 + 97) +
 				Math.floor(Math.random() * 982451653 + 982451653).toString(36);
@@ -1172,6 +1188,7 @@ abort-on-property-write.js application/javascript
 
 
 abort-on-property-read.js application/javascript
+alias aopr.js
 (function() {
 	var magic = String.fromCharCode(Date.now() % 26 + 97) +
 				Math.floor(Math.random() * 982451653 + 982451653).toString(36);
@@ -1225,6 +1242,7 @@ abort-on-property-read.js application/javascript
 
 
 abort-on-stack-trace.js application/javascript
+alias aost.js
 (function() {
 	let chain = '{{1}}';
 	let needle = '{{2}}';
@@ -1336,30 +1354,11 @@ abort-on-stack-trace.js application/javascript
 })();
 
 
-setTimeout-defuser.js application/javascript
-(function() {
-	var z = window.setTimeout,
-		needle = '{{1}}',
-		delay = parseInt('{{2}}', 10);
-	if ( needle === '' || needle === '{{1}}' ) {
-		needle = '.?';
-	} else if ( needle.slice(0,1) === '/' && needle.slice(-1) === '/' ) {
-		needle = needle.slice(1,-1);
-	} else {
-		needle = needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-	}
-	needle = new RegExp(needle);
-	window.setTimeout = function(a, b) {
-		if ( (isNaN(delay) || b == delay) && needle.test(a.toString()) ) {
-			return z(function(){}, b);
-		}
-		return z.apply(this, arguments);
-	}.bind(window);
-})();
-
-
 # https://github.com/gorhill/uBlock/commit/9367a6015b8cbb6b49347b00a105aab8f24df861
 no-setTimeout-if.js application/javascript
+alias nostif.js
+alias prevent-setTimeout.js
+alias setTimeout-defuser.js
 (function() {
 	let needle = '{{1}}';
 	const needleNot = needle.charAt(0) === '!';
@@ -1407,43 +1406,11 @@ no-setTimeout-if.js application/javascript
 })();
 
 
-setTimeout-logger.js application/javascript
-(function() {
-	var z = window.setTimeout,
-		log = console.log.bind(console);
-	window.setTimeout = function(a, b) {
-		log('uBO: setTimeout("%s", %s)', a.toString(), b);
-		return z.apply(this, arguments);
-	}.bind(window);
-})();
-
-
-setInterval-defuser.js application/javascript
-(function() {
-	var w = window,
-		z = w.setInterval,
-		needle = '{{1}}',
-		delay = parseInt('{{2}}', 10);
-	if ( needle === '' || needle === '{{1}}' ) {
-		needle = '.?';
-	} else if ( needle.slice(0,1) === '/' && needle.slice(-1) === '/' ) {
-		needle = needle.slice(1,-1);
-	} else {
-		needle = needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-	}
-	needle = new RegExp(needle);
-	w.setInterval = function(a, b) {
-		if ( (isNaN(delay) || b == delay) && needle.test(a.toString()) ) {
-			return z(function(){}, b);
-		}
-		return z.apply(this, arguments);
-	}.bind(w);
-	w.setInterval.toString = function() { return z.toString(); };
-})();
-
-
 # https://github.com/gorhill/uBlock/commit/9367a6015b8cbb6b49347b00a105aab8f24df861
 no-setInterval-if.js application/javascript
+alias nosiif.js
+alias prevent-setInterval.js
+alias setInterval-defuser.js
 (function() {
 	let needle = '{{1}}';
 	const needleNot = needle.charAt(0) === '!';
@@ -1488,40 +1455,6 @@ no-setInterval-if.js application/javascript
 			return target.apply(thisArg, args);
 		}
 	});
-})();
-
-
-setInterval-logger.js application/javascript
-(function() {
-	var z = window.setInterval,
-		log = console.log.bind(console);
-	window.setInterval = function(a, b) {
-		log('uBO: setInterval("%s", %s)', a.toString(), b);
-		return z.apply(this, arguments);
-	}.bind(window);
-})();
-
-
-# https://github.com/uBlockOrigin/uAssets/issues/521
-# https://github.com/uBlockOrigin/uAssets/issues/9123#issuecomment-848255120
-addEventListener-logger.js application/javascript
-(function() {
-	const log = console.log.bind(console);
-	self.EventTarget.prototype.addEventListener = new Proxy(
-		self.EventTarget.prototype.addEventListener,
-		{
-			apply: function(target, thisArg, args) {
-				let type, handler;
-				try {
-					type = String(args[0]);
-					handler = String(args[1]);
-				} catch(ex) {
-				}
-				log('addEventListener("%s", %s)', type, handler);
-				return target.apply(thisArg, args);
-			}
-		}
-	);
 })();
 
 
@@ -1636,6 +1569,8 @@ json-prune.js application/javascript
 # https://github.com/uBlockOrigin/uAssets/issues/521
 # https://github.com/uBlockOrigin/uAssets/issues/9123#issuecomment-848255120
 addEventListener-defuser.js application/javascript
+alias aeld.js
+alias prevent-addEventListener.js
 (function() {
 	let needle1 = '{{1}}';
 	if ( needle1 === '' || needle1 === '{{1}}' ) {
@@ -1678,7 +1613,10 @@ addEventListener-defuser.js application/javascript
 
 
 # https://github.com/uBlockOrigin/uAssets/issues/618
-abort-current-inline-script.js application/javascript
+abort-current-script.js application/javascript
+alias acs.js
+alias abort-current-inline-script.js
+alias acis.js
 (function() {
 	var target = '{{1}}';
 	if ( target === '' || target === '{{1}}' ) { return; }
@@ -1749,7 +1687,10 @@ abort-current-inline-script.js application/javascript
 
 
 # https://github.com/gorhill/uBlock/commit/b27848a060eee961e2403192097448467b3bc7b5
-window.open-defuser.js application/javascript
+no-window-open-if.js application/javascript
+alias nowoif.js
+alias prevent-window-open.js
+alias window.open-defuser.js
 (function() {
 	let arg1 = '{{1}}';
 	if ( arg1 === '{{1}}' ) { arg1 = ''; }
@@ -1927,6 +1868,7 @@ disable-newtab-links.js application/javascript
 
 
 set-constant.js application/javascript
+alias set.js
 (function() {
 	const chain = '{{1}}';
 	let cValue = '{{2}}';
@@ -2061,7 +2003,9 @@ set-constant.js application/javascript
 # boostRatio - The delay multiplier when there is a match, 0.5 speeds up by
 #      2 times and 2 slows down by 2 times, defaults to 0.05 or speed up
 #      20 times. Speed up and down both cap at 50 times.
-nano-setTimeout-booster.js application/javascript
+adjust-setTimeout.js application/javascript
+alias nano-setTimeout-booster.js
+alias nano-stb.js
 (function() {
 	let needleArg = '{{1}}';
 	if ( needleArg === '{{1}}' ) { needleArg = ''; }
@@ -2110,7 +2054,9 @@ nano-setTimeout-booster.js application/javascript
 # boostRatio - The delay multiplier when there is a match, 0.5 speeds up by
 #      2 times and 2 slows down by 2 times, defaults to 0.05 or speed up
 #      20 times. Speed up and down both cap at 50 times.
-nano-setInterval-booster.js application/javascript
+adjust-setInterval.js application/javascript
+alias nano-setInterval-booster.js
+alias nano-sib.js
 (function() {
 	let needleArg = '{{1}}';
 	if ( needleArg === '{{1}}' ) { needleArg = ''; }
@@ -2147,7 +2093,8 @@ nano-setInterval-booster.js application/javascript
 })();
 
 
-no-fetch-if.js application/javascript
+prevent-fetch.js application/javascript
+alias no-fetch-if.js
 (function() {
 	let arg1 = '{{1}}';
 	if ( arg1 === '{{1}}' ) { arg1 = ''; }
@@ -2220,6 +2167,7 @@ no-fetch-if.js application/javascript
 
 
 remove-attr.js application/javascript
+alias ra.js
 (function() {
 	const token = '{{1}}';
 	if ( token === '' || token === '{{1}}' ) { return; }
@@ -2285,6 +2233,7 @@ remove-attr.js application/javascript
 
 
 remove-class.js application/javascript
+alias rc.js
 (function() {
 	const token = '{{1}}';
 	if ( token === '' || token === '{{1}}' ) { return; }
@@ -2373,6 +2322,8 @@ requestAnimationFrame-if.js application/javascript
 
 # https://github.com/gorhill/uBlock/commit/1de0e820b87fdd3717b9f2653baaa7a934075055
 no-requestAnimationFrame-if.js application/javascript
+alias norafif.js
+alias prevent-requestAnimationFrame.js
 (function() {
 	let needle = '{{1}}';
 	if ( needle === '{{1}}' ) { needle = ''; }
@@ -2466,7 +2417,8 @@ fingerprint2.js application/javascript
 
 
 # https://github.com/NanoAdblocker/NanoFilters/issues/149
-cookie-remover.js application/javascript
+remove-cookie.js application/javascript
+alias cookie-remover.js
 (function() {
 	const needle = '{{1}}';
 	let reName = /./;
@@ -2516,7 +2468,8 @@ cookie-remover.js application/javascript
 
 
 # https://www.reddit.com/r/firefox/comments/9dudod/the_mysterious_case_of_missing_urls_and_googles/e5kgkkh
-ampproject.org/v0.js application/javascript
+ampproject_v0.js application/javascript
+alias ampproject.org/v0.js
 (function() {
 	let head = document.head;
 	if ( !head ) { return; }

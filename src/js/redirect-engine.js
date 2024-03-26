@@ -142,6 +142,7 @@ RedirectEntry.fromSelfie = function(selfie) {
 /******************************************************************************/
 
 let RedirectEngine = function() {
+    this.aliases = new Map();
     this.resources = new Map();
     this.reset();
     this.resourceNameRegister = '';
@@ -223,9 +224,9 @@ RedirectEngine.prototype.lookupToken = function(entries, reqURL) {
 /******************************************************************************/
 
 RedirectEngine.prototype.toURL = function(context) {
-    let token = this.lookup(context);
+    const token = this.lookup(context);
     if ( token === undefined ) { return; }
-    let entry = this.resources.get(token);
+    const entry = this.resources.get(this.aliases.get(token) || token);
     if ( entry !== undefined ) {
         return entry.toURL(context);
     }
@@ -234,8 +235,8 @@ RedirectEngine.prototype.toURL = function(context) {
 /******************************************************************************/
 
 RedirectEngine.prototype.matches = function(context) {
-    var token = this.lookup(context);
-    return token !== undefined && this.resources.has(token);
+    const token = this.lookup(context);
+    return token !== undefined && this.resources.has(this.aliases.get(token) || token);
 };
 
 /******************************************************************************/
@@ -419,7 +420,7 @@ RedirectEngine.prototype.fromSelfie = function(selfie) {
 /******************************************************************************/
 
 RedirectEngine.prototype.resourceURIFromName = function(name, mime) {
-    var entry = this.resources.get(name);
+    const entry = this.resources.get(this.aliases.get(name) || name);
     if ( entry && (mime === undefined || entry.mime.startsWith(mime)) ) {
         return entry.toURL();
     }
@@ -428,15 +429,8 @@ RedirectEngine.prototype.resourceURIFromName = function(name, mime) {
 /******************************************************************************/
 
 RedirectEngine.prototype.resourceContentFromName = function(name, mime) {
-    var entry;
-    for (;;) {
-        entry = this.resources.get(name);
-        if ( entry === undefined ) { return; }
-        if ( entry.mime.startsWith('alias/') === false ) {
-            break;
-        }
-        name = entry.mime.slice(6);
-    }
+    const entry = this.resources.get(this.aliases.get(name) || name);
+    if ( entry === undefined ) { return; }
     if ( mime === undefined || entry.mime.startsWith(mime) ) {
         return entry.toContent();
     }
@@ -450,23 +444,37 @@ RedirectEngine.prototype.resourceContentFromName = function(name, mime) {
 //   Consider 'none' a reserved keyword, to be used to disable redirection.
 
 RedirectEngine.prototype.resourcesFromString = function(text) {
-    let fields, encoded,
-        reNonEmptyLine = /\S/,
-        lineIter = new µBlock.LineIterator(text);
+    let   fields, encoded, aliasLineCount = 0;
+    const reNonEmptyLine = /\S/,
+          lineIter = new µBlock.LineIterator(text);
 
+    this.aliases = new Map();
     this.resources = new Map();
 
-    while ( lineIter.eot() === false ) {
-        let line = lineIter.next();
+    for ( let i = 0; lineIter.eot() === false; i++ ) {
+        const line = lineIter.next();
         if ( line.startsWith('#') ) { continue; }
 
         if ( fields === undefined ) {
-            let head = line.trim().split(/\s+/);
+            const head = line.trim().split(/\s+/);
             if ( head.length !== 2 ) { continue; }
             if ( head[0] === 'none' ) { continue; }
             encoded = head[1].indexOf(';') !== -1;
             fields = head;
+            aliasLineCount = i;
             continue;
+        }
+
+        // Legitimate part of data could start with 'alias '.
+        // We're past aliases part if apart for more than 1 line
+        // from when we last processed resource's head.
+        if ( i - aliasLineCount === 1 ) {
+            const data = line.trim().split(/\s+/);
+            if ( data.length === 2 && data[0] === 'alias' ) {
+                this.aliases.set(data[1], fields[0]);
+                aliasLineCount = i;
+                continue;
+            }
         }
 
         if ( reNonEmptyLine.test(line) ) {
@@ -498,25 +506,24 @@ RedirectEngine.prototype.resourcesFromString = function(text) {
 
 /******************************************************************************/
 
-var resourcesSelfieVersion = 3;
+const resourcesSelfieVersion = 4;
 
 RedirectEngine.prototype.selfieFromResources = function() {
     vAPI.cacheStorage.set({
         resourcesSelfie: {
             version: resourcesSelfieVersion,
+            aliases: µBlock.arrayFrom(this.aliases),
             resources: µBlock.arrayFrom(this.resources)
         }
     });
 };
 
 RedirectEngine.prototype.resourcesFromSelfie = function(callback) {
-    var me = this;
-
-    var onSelfieReady = function(bin) {
+    vAPI.cacheStorage.get('resourcesSelfie', bin => {
         if ( bin instanceof Object === false ) {
             return callback(false);
         }
-        var selfie = bin.resourcesSelfie;
+        const selfie = bin.resourcesSelfie;
         if (
             selfie instanceof Object === false ||
             selfie.version !== resourcesSelfieVersion ||
@@ -524,14 +531,16 @@ RedirectEngine.prototype.resourcesFromSelfie = function(callback) {
         ) {
             return callback(false);
         }
-        me.resources = new Map();
-        for ( var entry of bin.resourcesSelfie.resources ) {
-            me.resources.set(entry[0], RedirectEntry.fromSelfie(entry[1]));
+        this.aliases = new Map();
+        for ( const entry of bin.resourcesSelfie.aliases ) {
+            this.aliases.set(entry[0], entry[1]);
+        }
+        this.resources = new Map();
+        for ( const entry of bin.resourcesSelfie.resources ) {
+            this.resources.set(entry[0], RedirectEntry.fromSelfie(entry[1]));
         }
         callback(true);
-    };
-
-    vAPI.cacheStorage.get('resourcesSelfie', onSelfieReady);
+    });
 };
 
 RedirectEngine.prototype.invalidateResourcesSelfie = function() {
