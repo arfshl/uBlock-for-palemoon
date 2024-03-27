@@ -59,6 +59,11 @@ alias abp-resource:blank-js
 })();
 
 
+noop.json application/json
+alias noopjson
+{}
+
+
 noop.html text/html
 alias noopframe
 <!DOCTYPE html>
@@ -161,12 +166,12 @@ qXRvbwAAAB1kYXRhAAAAAQAAAABMYXZmNTUuMzMuMTAw
 
 
 hd-main.js application/javascript
-(function(){
-	var l = {};
-	var noopfn = function() {
-		;
+(function() {
+	'use strict';
+	const l = {};
+	const noopfn = function() {
 	};
-	var props = [
+	const props = [
 		"$j","Ad","Bd","Cd","Dd","Ed","Fd","Gd","Hd","Id","Jd","Nj","Oc","Pc","Pe",
 		"Qc","Qe","Rc","Re","Ri","Sc","Tc","Uc","Vc","Wc","Wg","Xc","Xg","Yc","Yd",
 		"ad","ae","bd","bf","cd","dd","ed","ef","ek","fd","fg","fh","fk","gd","hd",
@@ -181,7 +186,7 @@ hd-main.js application/javascript
 		"sf","te","tf","ti","ue","uf","ve","vf","we","wf","wg","wi","xe","ye","yf",
 		"yk","yl","ze","zf","zk"
 	];
-	for (var i = 0; i < props.length; i++) {
+	for ( let i = 0; i < props.length; i++ ) {
 		l[props[i]] = noopfn;
 	}
 	window.L = window.J = l;
@@ -192,11 +197,10 @@ hd-main.js application/javascript
 nofab.js application/javascript
 alias fuckadblock.js-3.2.0
 (function() {
-	var noopfn = function() {
-		;
+	'use strict';
+	const noopfn = function() {
 	};
-	//
-	var Fab = function() {};
+	const Fab = function() {};
 	Fab.prototype.check = noopfn;
 	Fab.prototype.clearEvent = noopfn;
 	Fab.prototype.emitEvent = noopfn;
@@ -212,15 +216,19 @@ alias fuckadblock.js-3.2.0
 		return this;
 	};
 	Fab.prototype.setOption = noopfn;
-	var fab = new Fab(),
-		getSetFab = {
-			get: function() { return Fab; },
-			set: function() {}
-		},
-		getsetfab = {
-			get: function() { return fab; },
-			set: function() {}
-		};
+	Fab.prototype.options = {
+		set: noopfn,
+		get: noopfn,
+	};
+	const fab = new Fab();
+	const getSetFab = {
+		get: function() { return Fab; },
+		set: function() {}
+	};
+	const getsetfab = {
+		get: function() { return fab; },
+		set: function() {}
+	};
 	if ( window.hasOwnProperty('FuckAdBlock') ) { window.FuckAdBlock = Fab; }
 	else { Object.defineProperty(window, 'FuckAdBlock', getSetFab); }
 	if ( window.hasOwnProperty('BlockAdBlock') ) { window.BlockAdBlock = Fab; }
@@ -246,12 +254,11 @@ alias fuckadblock.js-3.2.0
 google-analytics_ga.js application/javascript
 alias google-analytics.com/ga.js
 (function() {
-	var noopfn = function() {
-		;
+	'use strict';
+	const noopfn = function() {
 	};
 	//
-	var Gaq = function() {
-		;
+	const Gaq = function() {
 	};
 	Gaq.prototype.Na = noopfn;
 	Gaq.prototype.O = noopfn;
@@ -265,13 +272,18 @@ alias google-analytics.com/ga.js
 		if ( typeof a === 'function' ) {
 			a(); return;
 		}
-		if ( Array.isArray(a) === false ) {
-			return;
-		}
-		// https://twitter.com/catovitch/status/776442930345218048
+		if ( Array.isArray(a) === false ) { return; }
 		// https://developers.google.com/analytics/devguides/collection/gajs/methods/gaJSApiDomainDirectory#_gat.GA_Tracker_._link
-		if ( a[0] === '_link' && typeof a[1] === 'string' ) {
-			window.location.assign(a[1]);
+		// https://github.com/uBlockOrigin/uBlock-issues/issues/1807
+		if (
+			typeof a[0] === 'string' &&
+			/(^|\.)_link$/.test(a[0]) &&
+			typeof a[1] === 'string'
+		) {
+			try {
+				window.location.assign(a[1]);
+			} catch(ex) {
+			}
 		}
 		// https://github.com/gorhill/uBlock/issues/2162
 		if ( a[0] === '_set' && a[1] === 'hitCallback' && typeof a[2] === 'function' ) {
@@ -279,15 +291,15 @@ alias google-analytics.com/ga.js
 		}
 	};
 	//
-	var tracker = (function() {
-		var out = {};
-		var api = [
+	const tracker = (function() {
+		const out = {};
+		const api = [
 			'_addIgnoredOrganic _addIgnoredRef _addItem _addOrganic',
 			'_addTrans _clearIgnoredOrganic _clearIgnoredRef _clearOrganic',
 			'_cookiePathCopy _deleteCustomVar _getName _setAccount',
 			'_getAccount _getClientInfo _getDetectFlash _getDetectTitle',
 			'_getLinkerUrl _getLocalGifPath _getServiceMode _getVersion',
-			'_getVisitorCustomVar _initData _link _linkByPost',
+			'_getVisitorCustomVar _initData _linkByPost',
 			'_setAllowAnchor _setAllowHash _setAllowLinker _setCampContentKey',
 			'_setCampMediumKey _setCampNameKey _setCampNOKey _setCampSourceKey',
 			'_setCampTermKey _setCampaignCookieTimeout _setCampaignTrack _setClientInfo',
@@ -299,18 +311,24 @@ alias google-analytics.com/ga.js
 			'_trackPageview _trackSocial _trackTiming _trackTrans',
 			'_visitCode'
 		].join(' ').split(/\s+/);
-		var i = api.length;
-		while ( i-- ) {
-			out[api[i]] = noopfn;
+		for ( const method of api ) {
+			out[method] = noopfn;
 		}
 		out._getLinkerUrl = function(a) {
 			return a;
 		};
+		// https://github.com/AdguardTeam/Scriptlets/issues/154
+		out._link = function(a) {
+			if ( typeof a !== 'string' ) { return; }
+			try {
+				window.location.assign(a);
+			} catch(ex) {
+			}
+		};
 		return out;
 	})();
 	//
-	var Gat = function() {
-		;
+	const Gat = function() {
 	};
 	Gat.prototype._anonymizeIP = noopfn;
 	Gat.prototype._createTracker = noopfn;
@@ -330,12 +348,12 @@ alias google-analytics.com/ga.js
 	Gat.prototype.oa = noopfn;
 	Gat.prototype.pa = noopfn;
 	Gat.prototype.u = noopfn;
-	var gat = new Gat();
+	const gat = new Gat();
 	window._gat = gat;
 	//
-	var gaq = new Gaq();
+	const gaq = new Gaq();
 	(function() {
-		var aa = window._gaq || [];
+		const aa = window._gaq || [];
 		if ( Array.isArray(aa) ) {
 			while ( aa[0] ) {
 				gaq.push(aa.shift());
@@ -350,11 +368,9 @@ alias google-analytics.com/analytics.js
 alias googletagmanager_gtm.js
 alias googletagmanager.com/gtm.js
 (function() {
+	'use strict';
 	// https://developers.google.com/analytics/devguides/collection/analyticsjs/
 	const noopfn = function() {
-	};
-	const noopnullfn = function() {
-		return null;
 	};
 	//
 	const Tracker = function() {
@@ -393,9 +409,11 @@ alias googletagmanager.com/gtm.js
 	ga.create = function() {
 		return new Tracker();
 	};
-	ga.getByName = noopnullfn;
+	ga.getByName = function() {
+		return new Tracker();
+	};
 	ga.getAll = function() {
-		return [];
+		return [new Tracker()];
 	};
 	ga.remove = noopfn;
 	// https://github.com/uBlockOrigin/uAssets/issues/2107
@@ -406,18 +424,34 @@ alias googletagmanager.com/gtm.js
 	if ( dl instanceof Object ) {
 		if ( dl.hide instanceof Object && typeof dl.hide.end === 'function' ) {
 			dl.hide.end();
+			dl.hide.end = ()=>{};
 		}
 		if ( typeof dl.push === 'function' ) {
-			dl.push = function(o) {
-				if ( o instanceof Object && typeof o.eventCallback === 'function' ) {
-					setTimeout(o.eventCallback, 1);
-				}
+			const doCallback = function(item) {
+				if ( item instanceof Object === false ) { return; }
+				if ( typeof item.eventCallback !== 'function' ) { return; }
+				setTimeout(item.eventCallback, 1);
+				item.eventCallback = ()=>{};
 			};
+			dl.push = new Proxy(dl.push, {
+				apply: function(target, thisArg, args) {
+					doCallback(args[0]);
+					return Reflect.apply(target, thisArg, args);
+				}
+			});
+			if ( Array.isArray(dl) ) {
+				const q = dl.slice();
+				for ( const item of q ) {
+					doCallback(item);
+				}
+			}
 		}
 	}
 	// empty ga queue
 	if ( gaQueue instanceof Function && Array.isArray(gaQueue.q) ) {
-		for ( let entry of gaQueue.q ) {
+		const q = gaQueue.q.slice();
+		gaQueue.q.length = 0;
+		for ( const entry of q ) {
 			ga(...entry);
 		}
 	}
@@ -426,6 +460,7 @@ alias googletagmanager.com/gtm.js
 google-analytics_inpage_linkid.js application/javascript
 alias google-analytics.com/inpage_linkid.js
 (function() {
+	'use strict';
 	window._gaq = window._gaq || {
 		push: function() {
 			;
@@ -438,7 +473,8 @@ alias google-analytics.com/inpage_linkid.js
 google-analytics_cx_api.js application/javascript
 alias google-analytics.com/cx/api.js
 (function() {
-	var noopfn = function() {
+	'use strict';
+	const noopfn = function() {
 	};
 	window.cxApi = {
 		chooseVariation: function() {
@@ -452,6 +488,812 @@ alias google-analytics.com/cx/api.js
 		};
 })();
 
+
+# Source below is based on Mozilla source code:
+# https://searchfox.org/mozilla-central/rev/d317e93d9a59c9e4c06ada85fbff9f6a1ceaaad1/browser/extensions/webcompat/shims/google-ima.js
+# Modifications to the original code below this comment:
+# - Avoid JS syntax not supported by older browser versions
+# - Add missing shim event
+# - Modified to avoid jshint warnings as per uBO's config
+# - Added `OmidVerificationVendor` to `ima`
+# - Have `AdError.getInnerError()` return `null`
+# - Have `AdDisplayContainer` constructor add DIV element to container
+# - Added missing event dispatcher functionality
+# - Corrected return type of `Ad.getUniversalAdIds()`
+# - Corrected typo in `UniversalAdIdInfo.getAdIdValue()` method name
+# - Corrected dispatch of LOAD event when preloading is enabled
+# - Corrected dispatch of CONTENT_PAUSE/RESUME_REQUESTED events
+# Related issue:
+# - https://github.com/uBlockOrigin/uBlock-issues/issues/2158
+google-ima.js application/javascript
+alias google-ima3
+(function() {
+	'use strict';
+	if (!window.google || !window.google.ima || !window.google.ima.VERSION) {
+		const VERSION = "3.517.2";
+		const CheckCanAutoplay = (function() {
+			// Sourced from: https://searchfox.org/mozilla-central/source/dom/media/gtest/negative_duration.mp4
+			const TEST_VIDEO = new Blob(
+				[
+					new Uint32Array([
+						469762048,
+						1887007846,
+						1752392036,
+						0,
+						913273705,
+						1717987696,
+						828601953,
+						-1878917120,
+						1987014509,
+						1811939328,
+						1684567661,
+						0,
+						0,
+						0,
+						-402456576,
+						0,
+						256,
+						1,
+						0,
+						0,
+						256,
+						0,
+						0,
+						0,
+						256,
+						0,
+						0,
+						0,
+						64,
+						0,
+						0,
+						0,
+						0,
+						0,
+						0,
+						33554432,
+						-201261056,
+						1801548404,
+						1744830464,
+						1684564852,
+						251658241,
+						0,
+						0,
+						0,
+						0,
+						16777216,
+						0,
+						-1,
+						-1,
+						0,
+						0,
+						0,
+						0,
+						256,
+						0,
+						0,
+						0,
+						256,
+						0,
+						0,
+						0,
+						64,
+						5,
+						53250,
+						-2080309248,
+						1634296941,
+						738197504,
+						1684563053,
+						1,
+						0,
+						0,
+						0,
+						0,
+						-2137614336,
+						-1,
+						-1,
+						50261,
+						754974720,
+						1919706216,
+						0,
+						0,
+						1701079414,
+						0,
+						0,
+						0,
+						1701079382,
+						1851869295,
+						1919249508,
+						16777216,
+						1852402979,
+						102,
+						1752004116,
+						100,
+						1,
+						0,
+						0,
+						1852400676,
+						102,
+						1701995548,
+						102,
+						0,
+						1,
+						1819440396,
+						32,
+						1,
+						1651799011,
+						108,
+						1937011607,
+						100,
+						0,
+						1,
+						1668702599,
+						49,
+						0,
+						1,
+						0,
+						0,
+						0,
+						33555712,
+						4718800,
+						4718592,
+						0,
+						65536,
+						0,
+						0,
+						0,
+						0,
+						0,
+						0,
+						0,
+						0,
+						16776984,
+						1630601216,
+						21193590,
+						-14745500,
+						1729626337,
+						-1407254428,
+						89161945,
+						1049019,
+						9453056,
+						-251611125,
+						27269507,
+						-379058688,
+						-1329024392,
+						268435456,
+						1937011827,
+						0,
+						0,
+						268435456,
+						1668510835,
+						0,
+						0,
+						335544320,
+						2054386803,
+						0,
+						0,
+						0,
+						268435456,
+						1868788851,
+						0,
+						0,
+						671088640,
+						2019915373,
+						536870912,
+						2019914356,
+						0,
+						16777216,
+						16777216,
+						0,
+						0,
+						0,
+					]),
+				],
+				{ type: "video/mp4" }
+			);
+			let testVideo;
+			return function() {
+				if (!testVideo) {
+					testVideo = document.createElement("video");
+					testVideo.style =
+						"position:absolute; width:0; height:0; left:0; right:0; z-index:-1; border:0";
+					testVideo.setAttribute("muted", "muted");
+					testVideo.setAttribute("playsinline", "playsinline");
+					testVideo.src = URL.createObjectURL(TEST_VIDEO);
+					document.body.appendChild(testVideo);
+				}
+				return testVideo.play();
+			};
+		})();
+		const ima = {};
+		class AdDisplayContainer {
+			constructor(containerElement) {
+				const divElement = document.createElement("div");
+				divElement.style.setProperty("display", "none", "important");
+				divElement.style.setProperty("visibility", "collapse", "important");
+				containerElement.appendChild(divElement);
+			}
+			destroy() {}
+			initialize() {}
+		}
+		class ImaSdkSettings {
+			constructor() {
+				this.c = true;
+				this.f = {};
+				this.i = false;
+				this.l = "";
+				this.p = "";
+				this.r = 0;
+				this.t = "";
+				this.v = "";
+			}
+			getCompanionBackfill() {}
+			getDisableCustomPlaybackForIOS10Plus() {
+				return this.i;
+			}
+			getFeatureFlags() {
+				return this.f;
+			}
+			getLocale() {
+				return this.l;
+			}
+			getNumRedirects() {
+				return this.r;
+			}
+			getPlayerType() {
+				return this.t;
+			}
+			getPlayerVersion() {
+				return this.v;
+			}
+			getPpid() {
+				return this.p;
+			}
+			isCookiesEnabled() {
+				return this.c;
+			}
+			setAutoPlayAdBreaks() {}
+			setCompanionBackfill() {}
+			setCookiesEnabled(c) {
+				this.c = !!c;
+			}
+			setDisableCustomPlaybackForIOS10Plus(i) {
+				this.i = !!i;
+			}
+			setFeatureFlags(f) {
+				this.f = f;
+			}
+			setLocale(l) {
+				this.l = l;
+			}
+			setNumRedirects(r) {
+				this.r = r;
+			}
+			setPlayerType(t) {
+				this.t = t;
+			}
+			setPlayerVersion(v) {
+				this.v = v;
+			}
+			setPpid(p) {
+				this.p = p;
+			}
+			setSessionId(/*s*/) {}
+			setVpaidAllowed(/*a*/) {}
+			setVpaidMode(/*m*/) {}
+			// https://github.com/uBlockOrigin/uBlock-issues/issues/2265#issuecomment-1637094149
+			getDisableFlashAds() {
+			}
+			setDisableFlashAds() {
+			}
+		}
+		ImaSdkSettings.CompanionBackfillMode = {
+			ALWAYS: "always",
+			ON_MASTER_AD: "on_master_ad",
+		};
+		ImaSdkSettings.VpaidMode = {
+			DISABLED: 0,
+			ENABLED: 1,
+			INSECURE: 2,
+		};
+		class EventHandler {
+			constructor() {
+				this.listeners = new Map();
+			}
+			_dispatch(e) {
+				let listeners = this.listeners.get(e.type);
+				listeners = listeners ? Array.from(listeners.values()) : [];
+				for (const listener of listeners) {
+					try {
+						listener(e);
+					} catch (r) {
+						console.error(r);
+					}
+				}
+			}
+			addEventListener(types, c, options, context) {
+				if (!Array.isArray(types)) {
+					types = [types];
+				}
+				for (const t of types) {
+					if (!this.listeners.has(t)) {
+						this.listeners.set(t, new Map());
+					}
+					this.listeners.get(t).set(c, c.bind(context || this));
+				}
+			}
+			removeEventListener(types, c) {
+				if (!Array.isArray(types)) {
+					types = [types];
+				}
+				for (const t of types) {
+					const typeSet = this.listeners.get(t);
+					if (typeSet) {
+						typeSet.delete(c);
+					}
+				}
+			}
+		}
+		class AdsLoader extends EventHandler {
+			constructor() {
+				super();
+				this.settings = new ImaSdkSettings();
+			}
+			contentComplete() {}
+			destroy() {}
+			getSettings() {
+				return this.settings;
+			}
+			getVersion() {
+				return VERSION;
+			}
+			requestAds(/*r, c*/) {
+				// If autoplay is disabled and the page is trying to autoplay a tracking
+				// ad, then IMA fails with an error, and the page is expected to request
+				// ads again later when the user clicks to play.
+				CheckCanAutoplay().then(
+					() => {
+						const { ADS_MANAGER_LOADED } = AdsManagerLoadedEvent.Type;
+						this._dispatch(new ima.AdsManagerLoadedEvent(ADS_MANAGER_LOADED));
+					},
+					() => {
+						const e = new ima.AdError(
+							"adPlayError",
+							1205,
+							1205,
+							"The browser prevented playback initiated without user interaction."
+						);
+						this._dispatch(new ima.AdErrorEvent(e));
+					}
+				);
+			}
+		}
+		class AdsManager extends EventHandler {
+			constructor() {
+				super();
+				this.volume = 1;
+				this._enablePreloading = false;
+			}
+			collapse() {}
+			configureAdsManager() {}
+			destroy() {}
+			discardAdBreak() {}
+			expand() {}
+			focus() {}
+			getAdSkippableState() {
+				return false;
+			}
+			getCuePoints() {
+				return [0];
+			}
+			getCurrentAd() {
+				return currentAd;
+			}
+			getCurrentAdCuePoints() {
+				return [];
+			}
+			getRemainingTime() {
+				return 0;
+			}
+			getVolume() {
+				return this.volume;
+			}
+			init(/*w, h, m, e*/) {
+				if (this._enablePreloading) {
+					this._dispatch(new ima.AdEvent(AdEvent.Type.LOADED));
+				}
+			}
+			isCustomClickTrackingUsed() {
+				return false;
+			}
+			isCustomPlaybackUsed() {
+				return false;
+			}
+			pause() {}
+			requestNextAdBreak() {}
+			resize(/*w, h, m*/) {}
+			resume() {}
+			setVolume(v) {
+				this.volume = v;
+			}
+			skip() {}
+			start() {
+				requestAnimationFrame(() => {
+					for (const type of [
+						AdEvent.Type.LOADED,
+						AdEvent.Type.STARTED,
+						AdEvent.Type.CONTENT_PAUSE_REQUESTED,
+						AdEvent.Type.AD_BUFFERING,
+						AdEvent.Type.FIRST_QUARTILE,
+						AdEvent.Type.MIDPOINT,
+						AdEvent.Type.THIRD_QUARTILE,
+						AdEvent.Type.COMPLETE,
+						AdEvent.Type.ALL_ADS_COMPLETED,
+						AdEvent.Type.CONTENT_RESUME_REQUESTED,
+					]) {
+						try {
+							this._dispatch(new ima.AdEvent(type));
+						} catch (e) {
+							console.error(e);
+						}
+					}
+				});
+			}
+			stop() {}
+			updateAdsRenderingSettings(/*s*/) {}
+		}
+		class AdsRenderingSettings {}
+		class AdsRequest {
+			setAdWillAutoPlay() {}
+			setAdWillPlayMuted() {}
+			setContinuousPlayback() {}
+		}
+		class AdPodInfo {
+			getAdPosition() {
+				return 1;
+			}
+			getIsBumper() {
+				return false;
+			}
+			getMaxDuration() {
+				return -1;
+			}
+			getPodIndex() {
+				return 1;
+			}
+			getTimeOffset() {
+				return 0;
+			}
+			getTotalAds() {
+				return 1;
+			}
+		}
+		class Ad {
+			constructor() {
+				this._pi = new AdPodInfo();
+			}
+			getAdId() {
+				return "";
+			}
+			getAdPodInfo() {
+				return this._pi;
+			}
+			getAdSystem() {
+				return "";
+			}
+			getAdvertiserName() {
+				return "";
+			}
+			getApiFramework() {
+				return null;
+			}
+			getCompanionAds() {
+				return [];
+			}
+			getContentType() {
+				return "";
+			}
+			getCreativeAdId() {
+				return "";
+			}
+			getCreativeId() {
+				return "";
+			}
+			getDealId() {
+				return "";
+			}
+			getDescription() {
+				return "";
+			}
+			getDuration() {
+				return 8.5;
+			}
+			getHeight() {
+				return 0;
+			}
+			getMediaUrl() {
+				return null;
+			}
+			getMinSuggestedDuration() {
+				return -2;
+			}
+			getSkipTimeOffset() {
+				return -1;
+			}
+			getSurveyUrl() {
+				return null;
+			}
+			getTitle() {
+				return "";
+			}
+			getTraffickingParameters() {
+				return {};
+			}
+			getTraffickingParametersString() {
+				return "";
+			}
+			getUiElements() {
+				return [""];
+			}
+			getUniversalAdIdRegistry() {
+				return "unknown";
+			}
+			getUniversalAdIds() {
+				return [new UniversalAdIdInfo()];
+			}
+			getUniversalAdIdValue() {
+				return "unknown";
+			}
+			getVastMediaBitrate() {
+				return 0;
+			}
+			getVastMediaHeight() {
+				return 0;
+			}
+			getVastMediaWidth() {
+				return 0;
+			}
+			getWidth() {
+				return 0;
+			}
+			getWrapperAdIds() {
+				return [""];
+			}
+			getWrapperAdSystems() {
+				return [""];
+			}
+			getWrapperCreativeIds() {
+				return [""];
+			}
+			isLinear() {
+				return true;
+			}
+			isSkippable() {
+				return true;
+			}
+		}
+		class CompanionAd {
+			getAdSlotId() {
+				return "";
+			}
+			getContent() {
+				return "";
+			}
+			getContentType() {
+				return "";
+			}
+			getHeight() {
+				return 1;
+			}
+			getWidth() {
+				return 1;
+			}
+		}
+		class AdError {
+			constructor(type, code, vast, message) {
+				this.errorCode = code;
+				this.message = message;
+				this.type = type;
+				this.vastErrorCode = vast;
+			}
+			getErrorCode() {
+				return this.errorCode;
+			}
+			getInnerError() {
+					return null;
+			}
+			getMessage() {
+				return this.message;
+			}
+			getType() {
+				return this.type;
+			}
+			getVastErrorCode() {
+				return this.vastErrorCode;
+			}
+			toString() {
+				return `AdError ${this.errorCode}: ${this.message}`;
+			}
+		}
+		AdError.ErrorCode = {};
+		AdError.Type = {};
+		const isEngadget = () => {
+			try {
+				for (const ctx of Object.values(window.vidible._getContexts())) {
+					const player = ctx.getPlayer();
+					if (!player) { continue;}
+					const div = player.div;
+					if (!div) { continue; }
+					if (div.innerHTML.includes("www.engadget.com")) {
+						return true;
+					}
+				}
+			} catch (_) {}
+			return false;
+		};
+		const currentAd = isEngadget() ? undefined : new Ad();
+		class AdEvent {
+			constructor(type) {
+				this.type = type;
+			}
+			getAd() {
+				return currentAd;
+			}
+			getAdData() {
+				return {};
+			}
+		}
+		AdEvent.Type = {
+			AD_BREAK_READY: "adBreakReady",
+			AD_BUFFERING: "adBuffering",
+			AD_CAN_PLAY: "adCanPlay",
+			AD_METADATA: "adMetadata",
+			AD_PROGRESS: "adProgress",
+			ALL_ADS_COMPLETED: "allAdsCompleted",
+			CLICK: "click",
+			COMPLETE: "complete",
+			CONTENT_PAUSE_REQUESTED: "contentPauseRequested",
+			CONTENT_RESUME_REQUESTED: "contentResumeRequested",
+			DURATION_CHANGE: "durationChange",
+			EXPANDED_CHANGED: "expandedChanged",
+			FIRST_QUARTILE: "firstQuartile",
+			IMPRESSION: "impression",
+			INTERACTION: "interaction",
+			LINEAR_CHANGE: "linearChange",
+			LINEAR_CHANGED: "linearChanged",
+			LOADED: "loaded",
+			LOG: "log",
+			MIDPOINT: "midpoint",
+			PAUSED: "pause",
+			RESUMED: "resume",
+			SKIPPABLE_STATE_CHANGED: "skippableStateChanged",
+			SKIPPED: "skip",
+			STARTED: "start",
+			THIRD_QUARTILE: "thirdQuartile",
+			USER_CLOSE: "userClose",
+			VIDEO_CLICKED: "videoClicked",
+			VIDEO_ICON_CLICKED: "videoIconClicked",
+			VIEWABLE_IMPRESSION: "viewable_impression",
+			VOLUME_CHANGED: "volumeChange",
+			VOLUME_MUTED: "mute",
+		};
+		class AdErrorEvent {
+			constructor(error) {
+				this.type = "adError";
+				this.error = error;
+			}
+			getError() {
+				return this.error;
+			}
+			getUserRequestContext() {
+				return {};
+			}
+		}
+		AdErrorEvent.Type = {
+			AD_ERROR: "adError",
+		};
+		const manager = new AdsManager();
+		class AdsManagerLoadedEvent {
+			constructor(type) {
+				this.type = type;
+			}
+			getAdsManager(c, settings) {
+				if (settings && settings.enablePreloading) {
+					manager._enablePreloading = true;
+				}
+				return manager;
+			}
+			getUserRequestContext() {
+				return {};
+			}
+		}
+		AdsManagerLoadedEvent.Type = {
+			ADS_MANAGER_LOADED: "adsManagerLoaded",
+		};
+		class CustomContentLoadedEvent {}
+		CustomContentLoadedEvent.Type = {
+			CUSTOM_CONTENT_LOADED: "deprecated-event",
+		};
+		class CompanionAdSelectionSettings {}
+		CompanionAdSelectionSettings.CreativeType = {
+			ALL: "All",
+			FLASH: "Flash",
+			IMAGE: "Image",
+		};
+		CompanionAdSelectionSettings.ResourceType = {
+			ALL: "All",
+			HTML: "Html",
+			IFRAME: "IFrame",
+			STATIC: "Static",
+		};
+		CompanionAdSelectionSettings.SizeCriteria = {
+			IGNORE: "IgnoreSize",
+			SELECT_EXACT_MATCH: "SelectExactMatch",
+			SELECT_NEAR_MATCH: "SelectNearMatch",
+		};
+		class AdCuePoints {
+			getCuePoints() {
+				return [];
+			}
+		}
+		class AdProgressData {}
+		class UniversalAdIdInfo {
+			getAdIdRegistry() {
+				return "";
+			}
+			getAdIdValue() {
+				return "";
+			}
+		}
+		Object.assign(ima, {
+			AdCuePoints,
+			AdDisplayContainer,
+			AdError,
+			AdErrorEvent,
+			AdEvent,
+			AdPodInfo,
+			AdProgressData,
+			AdsLoader,
+			AdsManager: manager,
+			AdsManagerLoadedEvent,
+			AdsRenderingSettings,
+			AdsRequest,
+			CompanionAd,
+			CompanionAdSelectionSettings,
+			CustomContentLoadedEvent,
+			gptProxyInstance: {},
+			ImaSdkSettings,
+			OmidAccessMode: {
+				DOMAIN: "domain",
+				FULL: "full",
+				LIMITED: "limited",
+			},
+			OmidVerificationVendor: {
+				1: "OTHER",
+				2: "GOOGLE",
+				GOOGLE: 2,
+				OTHER: 1
+			},
+			settings: new ImaSdkSettings(),
+			UiElements: {
+				AD_ATTRIBUTION: "adAttribution",
+				COUNTDOWN: "countdown",
+			},
+			UniversalAdIdInfo,
+			VERSION,
+			ViewMode: {
+				FULLSCREEN: "fullscreen",
+				NORMAL: "normal",
+			},
+		});
+		if (!window.google) {
+			window.google = {};
+		}
+		window.google.ima = ima;
+}
+})();
+
+
 # Ubiquitous googletagservices.com: not blocked by EasyPrivacy.
 # "Tags are tiny bits of website code that let you measure traffic and
 # "visitor behavior"
@@ -459,37 +1301,35 @@ googletagservices_gpt.js application/javascript
 alias googletagservices.com/gpt.js
 alias googletagservices-gpt.js
 (function() {
-	var p;
+	'use strict';
 	// https://developers.google.com/doubleclick-gpt/reference
-	var noopfn = function() {
-		;
+	const noopfn = function() {
 	}.bind();
-	var noopthisfn = function() {
+	const noopthisfn = function() {
 		return this;
 	};
-	var noopnullfn = function() {
+	const noopnullfn = function() {
 		return null;
 	};
-	var nooparrayfn = function() {
+	const nooparrayfn = function() {
 		return [];
 	};
-	var noopstrfn = function() {
+	const noopstrfn = function() {
 		return '';
 	};
 	//
-	var companionAdsService = {
+	const companionAdsService = {
 		addEventListener: noopthisfn,
 		enableSyncLoading: noopfn,
 		setRefreshUnfilledSlots: noopfn
 	};
-	var contentService = {
+	const contentService = {
 		addEventListener: noopthisfn,
 		setContent: noopfn
 	};
-	var PassbackSlot = function() {
-		;
+	const PassbackSlot = function() {
 	};
-	p = PassbackSlot.prototype;
+	let p = PassbackSlot.prototype;
 	p.display = noopfn;
 	p.get = noopnullfn;
 	p.set = noopthisfn;
@@ -497,7 +1337,7 @@ alias googletagservices-gpt.js
 	p.setTagForChildDirectedTreatment = noopthisfn;
 	p.setTargeting = noopthisfn;
 	p.updateTargetingFromMap = noopthisfn;
-	var pubAdsService = {
+	const pubAdsService = {
 		addEventListener: noopthisfn,
 		clear: noopfn,
 		clearCategoryExclusions: noopthisfn,
@@ -509,15 +1349,17 @@ alias googletagservices-gpt.js
 		disableInitialLoad: noopfn,
 		display: noopfn,
 		enableAsyncRendering: noopfn,
+		enableLazyLoad: noopfn,
 		enableSingleRequest: noopfn,
 		enableSyncRendering: noopfn,
 		enableVideoAds: noopfn,
 		get: noopnullfn,
 		getAttributeKeys: nooparrayfn,
-		getTargeting: noopfn,
+		getTargeting: nooparrayfn,
 		getTargetingKeys: nooparrayfn,
 		getSlots: nooparrayfn,
 		refresh: noopfn,
+		removeEventListener: noopfn,
 		set: noopthisfn,
 		setCategoryExclusion: noopthisfn,
 		setCentering: noopfn,
@@ -525,6 +1367,7 @@ alias googletagservices-gpt.js
 		setForceSafeFrame: noopthisfn,
 		setLocation: noopthisfn,
 		setPublisherProvidedId: noopthisfn,
+		setPrivacySettings: noopthisfn,
 		setRequestNonPersonalizedAds: noopthisfn,
 		setSafeFrameConfig: noopthisfn,
 		setTagForChildDirectedTreatment: noopthisfn,
@@ -532,14 +1375,12 @@ alias googletagservices-gpt.js
 		setVideoContent: noopthisfn,
 		updateCorrelator: noopfn
 	};
-	var SizeMappingBuilder = function() {
-		;
+	const SizeMappingBuilder = function() {
 	};
 	p = SizeMappingBuilder.prototype;
 	p.addSize = noopthisfn;
 	p.build = noopnullfn;
-	var Slot = function() {
-		;
+	const Slot = function() {
 	};
 	p = Slot.prototype;
 	p.addService = noopthisfn;
@@ -561,9 +1402,10 @@ alias googletagservices-gpt.js
 	p.setClickUrl = noopthisfn;
 	p.setCollapseEmptyDiv = noopthisfn;
 	p.setTargeting = noopthisfn;
+	p.updateTargetingFromMap = noopthisfn;
 	//
-	var gpt = window.googletag || {};
-	var cmd = gpt.cmd || [];
+	const gpt = window.googletag || {};
+	const cmd = gpt.cmd || [];
 	gpt.apiReady = true;
 	gpt.cmd = [];
 	gpt.cmd.push = function(a) {
@@ -599,23 +1441,34 @@ googlesyndication_adsbygoogle.js application/javascript
 alias googlesyndication.com/adsbygoogle.js
 alias googlesyndication-adsbygoogle.js
 (function() {
-	window.adsbygoogle = {
-		loaded: true,
-		push: function () {
+	'use strict';
+	const init = ( ) => {
+		window.adsbygoogle = {
+			loaded: true,
+			push: function() {
+			}
+		};
+		const phs = document.querySelectorAll('.adsbygoogle');
+		const css = 'height:1px!important;max-height:1px!important;max-width:1px!important;width:1px!important;';
+		for ( let i = 0; i < phs.length; i++ ) {
+			const id = `aswift_${i}`;
+			if ( document.querySelector(`iframe#${id}`) !== null ) { continue; }
+			const fr = document.createElement('iframe');
+			fr.id = id;
+			fr.style = css;
+			const cfr = document.createElement('iframe');
+			cfr.id = `google_ads_frame${i}`;
+			fr.appendChild(cfr);
+			phs[i].appendChild(fr);
 		}
 	};
-	const phs = document.querySelectorAll('.adsbygoogle');
-	const css = 'height:1px!important;max-height:1px!important;max-width:1px!important;width:1px!important;';
-	for ( let i = 0; i < phs.length; i++ ) {
-		const id = `aswift_${(i)}`;
-		if ( document.querySelector(`iframe#${id}`) !== null ) { continue; }
-		const fr = document.createElement('iframe');
-		fr.id = id;
-		fr.style = css;
-		const cfr = document.createElement('iframe');
-		cfr.id = `google_ads_frame${i}`;
-		fr.appendChild(cfr);
-		phs[i].appendChild(fr);
+	if (
+		document.querySelectorAll('.adsbygoogle').length === 0 &&
+		document.readyState === 'loading'
+	) {
+		window.addEventListener('DOMContentLoaded', init, { once: true });
+	} else {
+		init();
 	}
 })();
 
@@ -625,6 +1478,7 @@ alias googlesyndication-adsbygoogle.js
 ligatus_angular-tag.js application/javascript
 alias ligatus.com/*/angular-tag.js
 (function() {
+	'use strict';
 	self.adProtect = true;
 	Object.defineProperties(window, {
 		uabpdl: { value: true },
@@ -637,53 +1491,101 @@ nobab.js application/javascript
 alias bab-defuser.js
 alias prevent-bab.js
 (function() {
-	var sto = window.setTimeout,
-		re = /\.bab_elementid.$/;
-	window.setTimeout = function(a, b) {
-		if ( typeof a !== 'string' || !re.test(a) ) {
-			return sto.apply(this, arguments);
-		}
-	}.bind(window);
-	var signatures = [
-		['blockadblock'],
-		['babasbm'],
-		[/getItem\('babn'\)/],
-		['getElementById','String.fromCharCode','ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789','charAt','DOMContentLoaded','AdBlock','addEventListener','doScroll','fromCharCode','<<2|r>>4','sessionStorage','clientWidth','localStorage','Math','random']
+	'use strict';
+	const signatures = [
+		[ 'blockadblock' ],
+		[ 'babasbm' ],
+		[ /getItem\('babn'\)/ ],
+		[
+			'getElementById',
+			'String.fromCharCode',
+			'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789',
+			'charAt',
+			'DOMContentLoaded',
+			'AdBlock',
+			'addEventListener',
+			'doScroll',
+			'fromCharCode',
+			'<<2|r>>4',
+			'sessionStorage',
+			'clientWidth',
+			'localStorage',
+			'Math',
+			'random'
+		],
 	];
-	var check = function(s) {
-		var tokens, match, j, token, pos;
-		for ( var i = 0; i < signatures.length; i++ ) {
-			tokens = signatures[i];
-			match = 0;
-			for ( j = 0, pos = 0; j < tokens.length; j++ ) {
-				token = tokens[j];
-				pos = token instanceof RegExp ? s.search(token) : s.indexOf(token);
+	const check = function(s) {
+		for ( let i = 0; i < signatures.length; i++ ) {
+			const tokens = signatures[i];
+			let match = 0;
+			for ( let j = 0; j < tokens.length; j++ ) {
+				const token = tokens[j];
+				const pos = token instanceof RegExp
+					? s.search(token)
+					: s.indexOf(token);
 				if ( pos !== -1 ) { match += 1; }
 			}
 			if ( (match / tokens.length) >= 0.8 ) { return true; }
 		}
 		return false;
 	};
-	var realEval = window.eval;
-	window.eval = function(a) {
-		if ( typeof a !== 'string' || !check(a) ) {
-			return realEval(a);
+	self.eval = new Proxy(self.eval, {			  // jshint ignore: line
+		apply: function(target, thisArg, args) {
+			const a = args[0];
+			if ( typeof a !== 'string' || !check(a) ) {
+				return target.apply(thisArg, args);
+			}
+			if ( document.body ) {
+				document.body.style.removeProperty('visibility');
+			}
+			let el = document.getElementById('babasbmsgx');
+			if ( el ) {
+				el.parentNode.removeChild(el);
+			}
 		}
-		var el = document.body;
-		if ( el ) {
-			el.style.removeProperty('visibility');
+	});
+	self.setTimeout = new Proxy(self.setTimeout, {
+		apply: function(target, thisArg, args) {
+			const a = args[0];
+			if (
+				typeof a !== 'string' ||
+				/\.bab_elementid.$/.test(a) === false
+			) {
+				return target.apply(thisArg, args);
+			}
 		}
-		el = document.getElementById('babasbmsgx');
-		if ( el ) {
-			el.parentNode.removeChild(el);
-		}
-	}.bind(window);
+	});
+})();
+
+
+nobab2.js application/javascript
+(function() {
+	'use strict';
+	const script = document.currentScript;
+	if ( script === null ) { return; }
+	const src = script.src;
+	if ( typeof src !== 'string' ) { return; }
+	// The scriplet is meant to act ONLY when it's being used as a redirection
+	// for specific domains.
+	const re = new RegExp(
+		'^https?://[\\w-]+\\.(' +
+		[
+			'adclixx\\.net',
+			'adnetasia\\.com',
+			'adtrackers\\.net',
+			'bannertrack\\.net',
+		].join('|') +
+		')/.'
+	);
+	if ( re.test(src) === false ) { return; }
+	window.nH7eXzOsG = 858;
 })();
 
 
 scorecardresearch_beacon.js application/javascript
 alias scorecardresearch.com/beacon.js
 (function() {
+	'use strict';
 	window.COMSCORE = {
 		purge: function() {
 			_comscore = [];
@@ -699,19 +1601,44 @@ alias scorecardresearch.com/beacon.js
 outbrain-widget.js application/javascript
 alias widgets.outbrain.com/outbrain.js
 (function() {
-	var noopfn = function() {
-		;
+	'use strict';
+	const noopfn = function() {
 	};
-	var obr = {};
-	var methods = [
-		'callClick', 'callLoadMore', 'callRecs', 'callUserZapping',
-		'callWhatIs', 'cancelRecommendation', 'cancelRecs', 'closeCard',
-		'closeModal', 'closeTbx', 'errorInjectionHandler', 'getCountOfRecs',
-		'getStat', 'imageError', 'manualVideoClicked', 'onOdbReturn',
-		'onVideoClick', 'pagerLoad', 'recClicked', 'refreshSpecificWidget',
-		'refreshWidget', 'reloadWidget', 'researchWidget', 'returnedError',
-		'returnedHtmlData', 'returnedIrdData', 'returnedJsonData', 'scrollLoad',
-		'showDescription', 'showRecInIframe', 'userZappingMessage', 'zappingFormAction'
+	const obr = {};
+	const methods = [
+		'callClick',
+		'callLoadMore',
+		'callRecs',
+		'callUserZapping',
+		'callWhatIs',
+		'cancelRecommendation',
+		'cancelRecs',
+		'closeCard',
+		'closeModal',
+		'closeTbx',
+		'errorInjectionHandler',
+		'getCountOfRecs',
+		'getStat',
+		'imageError',
+		'manualVideoClicked',
+		'onOdbReturn',
+		'onVideoClick',
+		'pagerLoad',
+		'recClicked',
+		'refreshSpecificWidget',
+		'renderSpaWidgets',
+		'refreshWidget',
+		'reloadWidget',
+		'researchWidget',
+		'returnedError',
+		'returnedHtmlData',
+		'returnedIrdData',
+		'returnedJsonData',
+		'scrollLoad',
+		'showDescription',
+		'showRecInIframe',
+		'userZappingMessage',
+		'zappingFormAction'
 	];
 	obr.extern = {
 		video: {
@@ -739,27 +1666,6 @@ alias doubleclick.net/instream/ad_status.js
 window.google_ad_status = 1;
 
 
-# https://github.com/gorhill/uBlock/issues/1384
-addthis.com/addthis_widget.js application/javascript
-(function() {
-	var noopfn = function() {
-		;
-	};
-	window.addthis = {
-		addEventListener: noopfn,
-		button: noopfn,
-		init: noopfn,
-		layers: noopfn,
-		ready: noopfn,
-		sharecounters: {
-			getShareCounts: noopfn
-		},
-		toolbox: noopfn,
-		update: noopfn
-	};
-})();
-
-
 # Completely experimental: load Disqus on demand only. Purpose is to avoid
 # connecting to Disqus' servers, unless the user explicitly asks for the
 # comments to be loaded.
@@ -776,8 +1682,9 @@ addthis.com/addthis_widget.js application/javascript
 disqus_forums_embed.js application/javascript
 alias disqus.com/forums/*/embed.js
 (function() {
-	var ee = document.getElementsByTagName('script');
-	var i = ee.length, src;
+	'use strict';
+	let ee = document.getElementsByTagName('script');
+	let i = ee.length, src;
 	while ( i-- ) {
 		src = ee[i].src || '';
 		if ( src === '' ) {
@@ -787,7 +1694,7 @@ alias disqus.com/forums/*/embed.js
 			return;
 		}
 	}
-	var e = document.createElement('script');
+	let e = document.createElement('script');
 	e.async = true;
 	e.src = '//' + window.disqus_shortname + '.disqus.com/embed.js';
 	document.body.appendChild(e);
@@ -797,20 +1704,21 @@ alias disqus.com/forums/*/embed.js
 disqus_embed.js application/javascript
 alias disqus.com/embed.js
 (function() {
-	var p = document.getElementById(window.disqus_container_id || 'disqus_thread');
+	'use strict';
+	let p = document.getElementById(window.disqus_container_id || 'disqus_thread');
 	if ( p === null ) {
 		return;
 	}
-	var b = document.createElement('button');
+	let b = document.createElement('button');
 	b.textContent = 'Disqus blocked by uBlock Origin: click to unblock';
 	b.type = 'button';
 	p.appendChild(b);
-	var loadDisqus = function(ev) {
+	let loadDisqus = function(ev) {
 		b.removeEventListener('click', loadDisqus);
 		p.removeChild(b);
-		var script = document.createElement('script');
+		let script = document.createElement('script');
 		script.async = true;
-		var t = Date.now().toString();
+		let t = Date.now().toString();
 		script.src = '//' + window.disqus_shortname + '.disqus.com/embed.js?_=1457540' + t.slice(-6);
 		document.body.appendChild(script);
 		ev.preventDefault();
@@ -823,14 +1731,15 @@ alias disqus.com/embed.js
 amazon_ads.js application/javascript
 alias amazon-adsystem.com/aax2/amzn_ads.js
 (function() {
+	'use strict';
 	if ( amznads ) {
 		return;
 	}
-	var w = window;
-	var noopfn = function() {
+	const w = window;
+	const noopfn = function() {
 		;
 	}.bind();
-	var amznads = {
+	let amznads = {
 		appendScriptTag: noopfn,
 		appendTargetingToAdServerUrl: noopfn,
 		appendTargetingToQueryString: noopfn,
@@ -939,28 +1848,6 @@ alert-buster.js application/javascript
 })();
 
 
-# https://github.com/uBlockOrigin/uAssets/issues/58
-gpt-defuser.js application/javascript
-(function() {
-	var noopfn = function() {
-		;
-	};
-	var props = '_resetGPT resetGPT resetAndLoadGPTRecovery _resetAndLoadGPTRecovery setupGPT setupGPTuo';
-	props = props.split(/\s+/);
-	while ( props.length ) {
-		var prop = props.pop();
-		if ( typeof window[prop] === 'function' ) {
-			window[prop] = noopfn; 
-		} else {
-			Object.defineProperty(window, prop, {
-				get: function() { return noopfn; },
-				set: noopfn
-			});
-		}
-	}
-})();
-
-
 # Prevent web pages from using eval(), and report attempts in console.
 noeval.js application/javascript
 (function() {
@@ -1034,42 +1921,22 @@ nowebrtc.js application/javascript
 })();
 
 
-# https://github.com/uBlockOrigin/uAssets/issues/88
-golem.de.js application/javascript
-(function() {
-	const rael = window.addEventListener;
-	window.addEventListener = function(a, b) {
-		rael(...arguments);
-		let haystack;
-		try {
-			haystack = b.toString();
-		} catch(ex) {
-		}
-		if (
-			typeof haystack === 'string' &&
-			/^\s*function\s*\(\)\s*\{\s*window\.clearTimeout\(r\)\s*\}\s*$/.test(haystack)
-		) {
-			b();
-		}
-	}.bind(window);
-})();
-
-
 # https://www.reddit.com/r/firefox/comments/4wpd23/popads_just_announced_that_they_have_a_new_method/
 popads.js application/javascript
 alias popads.net.js
 alias prevent-popads-net.js
 (function() {
-	var magic = String.fromCharCode(Date.now() % 26 + 97) +
-				Math.floor(Math.random() * 982451653 + 982451653).toString(36),
-		oe = window.onerror;
+	'use strict';
+	const magic = String.fromCharCode(Date.now() % 26 + 97) +
+				  Math.floor(Math.random() * 982451653 + 982451653).toString(36);
+	const oe = window.onerror;
 	window.onerror = function(msg, src, line, col, error) {
 		if ( typeof msg === 'string' && msg.indexOf(magic) !== -1 ) { return true; }
 		if ( oe instanceof Function ) {
 			return oe(msg, src, line, col, error);
 		}
 	}.bind();
-	var throwMagic = function() { throw magic; };
+	const throwMagic = function() { throw new ReferenceError(magic); };
 	delete window.PopAds;
 	delete window.popns;
 	Object.defineProperties(window, {
@@ -1082,6 +1949,7 @@ alias prevent-popads-net.js
 # https://github.com/uBlockOrigin/uAssets/issues/503
 popads-dummy.js application/javascript
 (function() {
+	'use strict';
 	delete window.PopAds;
 	delete window.popns;
 	Object.defineProperties(window, {
@@ -1091,65 +1959,20 @@ popads-dummy.js application/javascript
 })();
 
 
-# https://forums.lanik.us/viewtopic.php?f=64&t=32278
-# https://www.reddit.com/r/chrome/comments/58eix6/ublock_origin_not_working_on_certain_sites/
-upmanager-defuser.js application/javascript
-(function() {
-	var onerror = window.onerror;
-	window.onerror = function(msg, source, lineno, colno, error) {
-		if ( typeof msg === 'string' && msg.indexOf('upManager') !== -1 ) {
-			return true;
-		}
-		if ( onerror instanceof Function ) {
-			onerror.call(window, msg, source, lineno, colno, error);
-		}
-	};
-	Object.defineProperty(window, 'upManager', { value: function() {} });
-})();
-
-
-# https://github.com/uBlockOrigin/uAssets/issues/110
-smartadserver.com.js application/javascript
-Object.defineProperties(window, {
-	SmartAdObject: { value: function(){} },
-	SmartAdServerAjax: { value: function(){} },
-	smartAd: { value: { LoadAds: function() {}, Register: function() {} } }
-});
-
-
-# https://github.com/uBlockOrigin/uAssets/issues/125
-d3pkae9owd2lcf.cloudfront.net/mb105.js application/javascript
-(function() {
-	var noopfn = function(){};
-	window.pbjs = { libLoaded: true };
-	var mb = window.MonkeyBroker || {
-		addAttribute: noopfn,
-		addSlot: function(a) {
-			this.slots[a.slot] = {};
-		},
-		defineSlot: noopfn,
-		fillSlot: noopfn,
-		go: noopfn,
-		inventoryConditionalPlacement: noopfn,
-		registerSizeCallback: noopfn,
-		registerSlotCallback: noopfn,
-		slots: {},
-		version: ''
-	};
-	mb.regSlotsMap = mb.slots;
-	window.MonkeyBroker = mb;
-})();
-
-
 # https://twitter.com/Scarbir/status/785551814460571648
 chartbeat.js application/javascript
 alias static.chartbeat.com/chartbeat.js
 (function() {
-	var noopfn = function(){};
+	'use strict';
+	const noopfn = function() {
+	};
 	window.pSUPERFLY = {
 		activity: noopfn,
 		virtualPage: noopfn
 	};
+	for ( const hider of document.querySelectorAll('style[id^=chartbeat-flicker-control]') ) {
+		hider.remove();
+	}
 })();
 
 
@@ -1786,70 +2609,6 @@ alias window.open-defuser.js
 })();
 
 
-# https://github.com/reek/anti-adblock-killer/issues/3774#issuecomment-348536138
-# https://github.com/uBlockOrigin/uAssets/issues/883
-adfly-defuser.js application/javascript
-(function() {
-	// Based on AdsBypasser
-	// License:
-	// https://github.com/adsbypasser/adsbypasser/blob/master/LICENSE
-	var isDigit = /^\d$/;
-	var handler = function(encodedURL) {
-		var var1 = "", var2 = "", i;
-		for (i = 0; i < encodedURL.length; i++) {
-			if (i % 2 === 0) {
-				var1 = var1 + encodedURL.charAt(i);
-			} else {
-				var2 = encodedURL.charAt(i) + var2;
-			}
-		}
-		var data = (var1 + var2).split("");
-		for (i = 0; i < data.length; i++) {
-			if (isDigit.test(data[i])) {
-				for (var ii = i + 1; ii < data.length; ii++) {
-					if (isDigit.test(data[ii])) {
-						var temp = parseInt(data[i],10) ^ parseInt(data[ii],10);
-						if (temp < 10) {
-							data[i] = temp.toString();
-						}
-						i = ii;
-						break;
-					}
-				}
-			}
-		}
-		data = data.join("");
-		var decodedURL = window.atob(data).slice(16, -16);
-		window.stop();
-		window.onbeforeunload = null;
-		window.location.href = decodedURL;
-	};
-	try {
-		var val;
-		var flag = true;
-		window.Object.defineProperty(window, "ysmm", {
-			configurable: false,
-			set: function(value) {
-				if (flag) {
-					flag = false;
-					try {
-						if (typeof value === "string") {
-							handler(value);
-						}
-					} catch (err) { }
-				}
-				val = value;
-			},
-			get: function() {
-				return val;
-			}
-		});
-	} catch (err) {
-		window.console.error("Failed to set up Adfly bypasser!");
-	}
-})();
-
-
 # https://github.com/uBlockOrigin/uAssets/issues/913
 disable-newtab-links.js application/javascript
 (function() {
@@ -2354,65 +3113,67 @@ alias prevent-requestAnimationFrame.js
 })();
 
 
-damoh-defuser.js application/javascript
-(function() {
-	var handled = new WeakSet();
-	var asyncTimer;
-	var cleanVideo = function() {
-		asyncTimer = undefined;
-		var v = document.querySelector('video');
-		if ( v === null ) { return; }
-		if ( handled.has(v) ) { return; }
-		handled.add(v);
-		v.pause();
-		v.controls = true;
-		var el = v.querySelector('meta[itemprop="contentURL"][content]');
-		if ( el === null ) { return; }
-		v.src = el.getAttribute('content');
-		el = v.querySelector('meta[itemprop="thumbnailUrl"][content]');
-		if ( el !== null ) { v.poster = el.getAttribute('content'); }
-	};
-	var cleanVideoAsync = function() {
-		if ( asyncTimer !== undefined ) { return; }
-		asyncTimer = window.requestAnimationFrame(cleanVideo);
-	};
-	var observer = new MutationObserver(cleanVideoAsync);
-	observer.observe(document.documentElement, { childList: true, subtree: true });
-})();
-
-
-# https://github.com/uBlockOrigin/uAssets/issues/5184
-twitch-videoad.js application/javascript
-(function() {
-	if ( /(^|\.)twitch\.tv$/.test(document.location.hostname) === false ) { return; }
-	var realFetch = window.fetch;
-	window.fetch = function(input) {
-		if ( arguments.length >= 2 && typeof input === 'string' && input.includes('/access_token') ) {
-			var url = new URL(arguments[0]);
-			url.searchParams.delete('platform');
-			arguments[0] = url.href;
-		}
-		return realFetch.apply(this, arguments);
-	};
-})();
-
-
 # https://github.com/uBlockOrigin/uAssets/issues/2912
+# Reference:
+# https://github.com/fingerprintjs/fingerprintjs/tree/v2
 fingerprint2.js application/javascript
 (function() {
-	let browserId = '';
-	for ( let i = 0; i < 8; i++ ) {
-		browserId += (Math.random() * 0x10000 + 0x1000 | 0).toString(16).slice(-4);
-	}
-	let fp2 = function(){};
+	'use strict';
+	const hex32 = len => {
+		return Math.floor(Math.random() * Number.MAX_SAFE_INTEGER)
+			.toString(16)
+			.slice(-len)
+			.padStart(len, '0');
+	};
+	const browserId = `${hex32(8)}${hex32(8)}${hex32(8)}${hex32(8)}`;
+	const fp2 = function(){};
 	fp2.get = function(opts, cb) {
 		if ( !cb  ) { cb = opts; }
-		setTimeout(( ) => { cb(browserId, []); }, 1);
+		setTimeout(( ) => { cb([]); }, 1);
+	};
+	fp2.getPromise = function() {
+		return Promise.resolve([]);
+	};
+	fp2.getV18 = function() {
+		return browserId;
+	};
+	fp2.x64hash128 = function() {
+		return browserId;
 	};
 	fp2.prototype = {
-		get: fp2.get
+		get: function(opts, cb) {
+			if ( !cb  ) { cb = opts; }
+			setTimeout(( ) => { cb(browserId, []); }, 1);
+		},
 	};
-	window.Fingerprint2 = fp2;
+	self.Fingerprint2 = fp2;
+})();
+
+
+fingerprint3.js application/javascript
+(function() {
+	'use strict';
+	const visitorId = (( ) => {
+		let id = '';
+		for ( let i = 0; i < 8; i++ ) {
+			id += (Math.random() * 0x10000 + 0x1000 | 0).toString(16).slice(-4);
+		}
+		return id;
+	})();
+	const FingerprintJS = class {
+		static hashComponents() {
+			return visitorId;
+		}
+		static load() {
+			return Promise.resolve(new FingerprintJS());
+		}
+		get() {
+			return Promise.resolve({
+				visitorId,
+			});
+		}
+	};
+	window.FingerprintJS = FingerprintJS;
 })();
 
 
@@ -2471,9 +3232,10 @@ alias cookie-remover.js
 ampproject_v0.js application/javascript
 alias ampproject.org/v0.js
 (function() {
-	let head = document.head;
+	'use strict';
+	const head = document.head;
 	if ( !head ) { return; }
-	let style = document.createElement('style');
+	const style = document.createElement('style');
 	style.textContent = [
 		'body {',
 		'  animation: none !important;',
@@ -2485,11 +3247,15 @@ alias ampproject.org/v0.js
 
 
 # https://github.com/gorhill/uBlock/commit/f842ab6d3c1cf0394f95d27092bf59627262da40
+# https://www.reddit.com/r/uBlockOrigin/comments/ghjqph/
+# https://github.com/NanoMeow/QuickReports/issues/3717
 amazon_apstag.js application/javascript
 (function() {
-	let w = window;
-	let noopfn = function() { ; }.bind();
-	let apstag = {
+	'use strict';
+	const noopfn = function() {
+		; // jshint ignore:line
+	}.bind();
+	const apstag = {
 		fetchBids: function(a, b) {
 			if ( b instanceof Function ) {
 				b([]);
@@ -2499,5 +3265,5 @@ amazon_apstag.js application/javascript
 		setDisplayBids: noopfn,
 		targetingKeys: noopfn,
 	};
-	w.apstag = apstag;
+	window.apstag = apstag;
 })();
