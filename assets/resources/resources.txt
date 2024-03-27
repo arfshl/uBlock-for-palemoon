@@ -1857,6 +1857,73 @@ alert-buster.js application/javascript
 })();
 
 
+# https://www.reddit.com/r/uBlockOrigin/comments/q0frv0/while_reading_a_sports_article_i_was_redirected/hf7wo9v/
+prevent-refresh.js application/javascript
+alias refresh-defuser.js
+function(arg1) {
+	'use strict';
+	const scriptletGlobals = {};
+	function safeSelf() {
+		if ( scriptletGlobals.safeSelf ) {
+			return scriptletGlobals.safeSelf;
+		}
+		const self = window;
+		const safe = {
+			'addEventListener': self.EventTarget.prototype.addEventListener,
+			'removeEventListener': self.EventTarget.prototype.removeEventListener,
+		};
+		scriptletGlobals.safeSelf = safe;
+		return safe;
+	}
+	function makeLogPrefix(...args) {
+		return `uBO: [${args.join(' \u205D ')}]` || '';
+	}
+	function runAt(fn, when) {
+		const intFromReadyState = state => {
+			const targets = {
+				'loading': 1,
+				'interactive': 2, 'end': 2, '2': 2,
+				'complete': 3, 'idle': 3, '3': 3,
+			};
+			const tokens = Array.isArray(state) ? state : [ state ];
+			for ( const token of tokens ) {
+				const prop = `${token}`;
+				if ( targets.hasOwnProperty(prop) === false ) { continue; }
+				return targets[prop];
+			}
+			return 0;
+		};
+		const runAt = intFromReadyState(when);
+		if ( intFromReadyState(document.readyState) >= runAt ) {
+			fn(); return;
+		}
+		const onStateChange = ( ) => {
+			if ( intFromReadyState(document.readyState) < runAt ) { return; }
+			fn();
+			safe.removeEventListener.apply(document, args);
+		};
+		const safe = safeSelf();
+		const args = [ 'readystatechange', onStateChange, { capture: true } ];
+		safe.addEventListener.apply(document, args);
+	}
+	if ( arg1 === undefined ) { arg1 = ''; }
+	const log = console.log.bind(console, makeLogPrefix('prevent-refresh', arg1));
+	const defuse = ( ) => {
+		const meta = document.querySelector('meta[http-equiv="refresh" i][content]');
+		if ( meta === null ) { return; }
+		log(`Prevented "${meta.textContent}"`);
+		const s = arg1 === ''
+			? meta.getAttribute('content')
+			: arg1;
+		const ms = Math.max(parseFloat(s) || 0, 0) * 1000;
+		setTimeout(( ) => { window.stop(); }, ms);
+	};
+	runAt(( ) => {
+		defuse();
+	}, 'interactive');
+}
+
+
 # Prevent web pages from using eval(), and report attempts in console.
 noeval.js application/javascript
 (function() {
