@@ -3291,6 +3291,60 @@ function(pattern, delay, decoy) {
 }
 
 
+# https://github.com/uBlockOrigin/uAssets/issues/10323#issuecomment-992312847
+# https://github.com/AdguardTeam/Scriptlets/issues/158
+# https://github.com/uBlockOrigin/uBlock-issues/discussions/2270
+close-window.js application/javascript
+alias window-close-if.js
+function(arg1) {
+	'use strict';
+	const scriptletGlobals = {};
+	function safeSelf() {
+		if ( scriptletGlobals.safeSelf ) {
+			return scriptletGlobals.safeSelf;
+		}
+		const self = window;
+		const safe = {
+			escapeRegexChars(s) {
+				return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+			},
+			patternToRegex(pattern, flags = undefined, verbatim = false) {
+				if ( pattern === '' ) { return /^/; }
+				const match = /^\/(.+)\/([gimsu]*)$/.exec(pattern);
+				if ( match === null ) {
+					const reStr = this.escapeRegexChars(pattern);
+					return new RegExp(verbatim ? `^${reStr}$` : reStr, flags);
+				}
+				try {
+					return new RegExp(match[1], match[2] || undefined);
+				}
+				catch(ex) {
+				}
+				return /^/;
+			},
+		};
+		scriptletGlobals.safeSelf = safe;
+		return safe;
+	}
+	if ( arg1 === undefined ) { arg1 = ''; }
+	const safe = safeSelf();
+	let subject = '';
+	if ( /^\/.*\/$/.test(arg1) ) {
+		subject = window.location.href;
+	} else if ( arg1 !== '' ) {
+		subject = `${window.location.pathname}${window.location.search}`;
+	}
+	try {
+		const re = safe.patternToRegex(arg1);
+		if ( re.test(subject) ) {
+			window.close();
+		}
+	} catch(ex) {
+		console.log(ex);
+	}
+}
+
+
 # https://github.com/uBlockOrigin/uAssets/issues/913
 disable-newtab-links.js application/javascript
 (function() {
