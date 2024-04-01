@@ -25,15 +25,15 @@
 
 // Load all: executed once.
 
-µBlock.restart = (function() {
+µBlock.restart = (( ) => {
 
 /******************************************************************************/
 
-var µb = µBlock;
+const µb = µBlock;
 
 /******************************************************************************/
 
-vAPI.app.onShutdown = function() {
+vAPI.app.onShutdown = ( ) => {
     µb.staticFilteringReverseLookup.shutdown();
     µb.assets.updateStop();
     µb.staticNetFilteringEngine.reset();
@@ -48,9 +48,9 @@ vAPI.app.onShutdown = function() {
 
 /******************************************************************************/
 
-var processCallbackQueue = function(queue, callback) {
-    var processOne = function() {
-        var fn = queue.pop();
+const processCallbackQueue = (queue, callback) => {
+    const processOne = ( ) => {
+        const fn = queue.pop();
         if ( fn ) {
             fn(processOne);
         } else if ( typeof callback === 'function' ) {
@@ -66,7 +66,7 @@ var processCallbackQueue = function(queue, callback) {
 // - Initialize internal state with maybe already existing tabs.
 // - Schedule next update operation.
 
-var onAllReady = function() {
+const onAllReady = ( ) => {
     // https://github.com/chrisaljoudi/uBlock/issues/184
     // Check for updates not too far in the future.
     µb.assets.addObserver(µb.assetObserver.bind(µb));
@@ -93,7 +93,7 @@ var onAllReady = function() {
 // Filtering engines dependencies:
 // - PSL
 
-var onPSLReady = function() {
+const onPSLReady = ( ) => {
     µb.selfieManager.load(function(valid) {
         if ( valid === true ) {
             return onAllReady();
@@ -106,38 +106,43 @@ var onPSLReady = function() {
 
 // To bring older versions up to date
 
-var onVersionReady = function(lastVersion) {
+const onVersionReady = lastVersion => {
     if ( lastVersion === vAPI.app.version ) { return; }
 
     // Update `assetSourceRegistry` if `assets.json` gets new `contentURL`.
     // https://github.com/gorhill/uBlock-for-firefox-legacy/issues/108
-    µb.assets.fetchText(
-        µb.assetsBootstrapLocation || 'assets/assets.json',
-        function(details) {
-            var assetDetails, assetKey = 'assets.json';
-            try {
-                assetDetails = JSON.parse(details.content)[assetKey];
-            } catch (ex) {
-            }
-            if ( assetDetails instanceof Object === false ) { return; }
-            vAPI.storage.get('assetSourceRegistry', function(bin) {
-                try {
-                    if (
-                        bin.assetSourceRegistry[assetKey].contentURL.join()
-                            !== assetDetails.contentURL.join()
-                    ) {
-                        µb.assets.registerAssetSource(assetKey, assetDetails);
-                        µb.assets.purge('assets.json');
-                    }
-                } catch (ex) {
-                }
-            });
+    µb.assets.fetchText(µb.assetsBootstrapLocation || 'assets/assets.json', details => {
+        let assetDetails;
+        const assetKey = 'assets.json';
+        try {
+            assetDetails = JSON.parse(details.content)[assetKey];
+        } catch (ex) {
         }
-    );
 
-    // Force updating `resources.txt` when installing a new version.
-    // https://github.com/gorhill/uBlock-for-firefox-legacy/issues/134
-    µb.assets.purge('ublock-resources');
+        if ( assetDetails instanceof Object === false ) { return; }
+
+        vAPI.storage.get('assetSourceRegistry', bin => {
+            let current = bin.assetSourceRegistry[assetKey];
+            if ( current && current.contentURL ) {
+                current = current.contentURL.join();
+            }
+
+            let incoming;
+            if ( Array.isArray(assetDetails.contentURL) ) {
+                incoming = assetDetails.contentURL.join();
+            } else {
+                incoming = assetDetails.contentURL;
+            }
+
+            if ( incoming && current !== incoming ) {
+                µb.assets.registerAssetSource(assetKey, assetDetails);
+            }
+        });
+    });
+
+    // Since built-in resources may have changed since last version, we
+    // force a reload of all resources.
+    µb.redirectEngine.invalidateResourcesSelfie();
 
     vAPI.storage.set({ version: vAPI.app.version });
 };
@@ -149,7 +154,7 @@ var onVersionReady = function(lastVersion) {
 // Whitelist parser needs PSL to be ready.
 // gorhill 2014-12-15: not anymore
 
-var onNetWhitelistReady = function(netWhitelistRaw) {
+const onNetWhitelistReady = netWhitelistRaw => {
     µb.netWhitelist = µb.whitelistFromString(netWhitelistRaw);
     µb.netWhitelistModifyTime = Date.now();
 };
@@ -158,8 +163,8 @@ var onNetWhitelistReady = function(netWhitelistRaw) {
 
 // User settings are in memory
 
-var onUserSettingsReady = function(fetched) {
-    var userSettings = µb.userSettings;
+const onUserSettingsReady = fetched => {
+    const userSettings = µb.userSettings;
 
     fromFetch(userSettings, fetched);
 
@@ -190,8 +195,8 @@ var onUserSettingsReady = function(fetched) {
 
 // Housekeeping, as per system setting changes
 
-var onSystemSettingsReady = function(fetched) {
-    var mustSaveSystemSettings = false;
+const onSystemSettingsReady = fetched => {
+    let mustSaveSystemSettings = false;
     if ( fetched.compiledMagic !== µb.systemSettings.compiledMagic ) {
         µb.assets.remove(/^compiled\//);
         mustSaveSystemSettings = true;
@@ -208,7 +213,7 @@ var onSystemSettingsReady = function(fetched) {
 
 /******************************************************************************/
 
-var onFirstFetchReady = function(fetched) {
+const onFirstFetchReady = fetched => {
     // https://github.com/gorhill/uBlock/issues/747
     µb.firstInstall = fetched.version === '0.0.0.0';
 
@@ -226,8 +231,8 @@ var onFirstFetchReady = function(fetched) {
 
 /******************************************************************************/
 
-var toFetch = function(from, fetched) {
-    for ( var k in from ) {
+const toFetch = (from, fetched) => {
+    for ( const k in from ) {
         if ( from.hasOwnProperty(k) === false ) {
             continue;
         }
@@ -235,8 +240,8 @@ var toFetch = function(from, fetched) {
     }
 };
 
-var fromFetch = function(to, fetched) {
-    for ( var k in to ) {
+const fromFetch = (to, fetched) => {
+    for ( const k in to ) {
         if ( to.hasOwnProperty(k) === false ) {
             continue;
         }
@@ -249,8 +254,8 @@ var fromFetch = function(to, fetched) {
 
 /******************************************************************************/
 
-var onSelectedFilterListsLoaded = function() {
-    var fetchableProps = {
+const onSelectedFilterListsLoaded = ( ) => {
+    const fetchableProps = {
         'compiledMagic': '',
         'dynamicFilteringString': [
             'behind-the-scene * * noop',
@@ -290,14 +295,14 @@ var onSelectedFilterListsLoaded = function() {
 // compatibility, this means a special asynchronous call to load selected
 // filter lists.
 
-var onAdminSettingsRestored = function() {
+const onAdminSettingsRestored = ( ) => {
     µb.loadSelectedFilterLists(onSelectedFilterListsLoaded);
 };
 
 /******************************************************************************/
 
-return function() {
-    processCallbackQueue(µb.onBeforeStartQueue, function() {
+return ( ) => {
+    processCallbackQueue(µb.onBeforeStartQueue, ( ) => {
         // https://github.com/gorhill/uBlock/issues/531
         µb.restoreAdminSettings(onAdminSettingsRestored);
     });

@@ -862,8 +862,12 @@ var getRemote = function(assetKey, callback) {
     };
 
     var tryLoading = function() {
-        while ( (contentURL = contentURLs.shift()) ) {
-            if ( reIsExternalPath.test(contentURL) ) { break; }
+        if ( contentURLs.length < 2 ) {
+            contentURL = contentURLs.shift();
+        } else {
+            while ( (contentURL = contentURLs.shift()) ) {
+                if ( reIsExternalPath.test(contentURL) ) { break; }
+            }
         }
         if ( !contentURL ) {
             return reportBack('', 'E_NOTFOUND');
@@ -985,7 +989,6 @@ var updateNext = function() {
             assetEntry, cacheEntry;
         for ( var assetKey in assetDict ) {
             assetEntry = assetDict[assetKey];
-            if ( assetEntry.hasRemoteURL !== true ) { continue; }
             if ( updaterFetched.has(assetKey) ) { continue; }
             cacheEntry = cacheDict[assetKey];
             if ( cacheEntry && (cacheEntry.writeTime + assetEntry.updateAfter * 86400000) > now ) {
