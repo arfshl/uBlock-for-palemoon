@@ -36,13 +36,6 @@
         scriptletsRegister = new Map(),
         reEscapeScriptArg = /[\\'"]/g;
 
-    var scriptletRemover = [
-        '(function() {',
-        '  var c = document.currentScript, p = c && c.parentNode;',
-        '  if ( p ) { p.removeChild(c); }',
-        '})();'
-    ].join('\n');
-
 
     var lookupScriptlet = function(raw, reng, toInject) {
         if ( toInject.has(raw) ) { return; }
@@ -241,16 +234,7 @@
 
         if ( out.length === 0 ) { return; }
 
-        out.push(scriptletRemover);
-
         return out.join('\n');
-    };
-
-    api.apply = function(doc, details) {
-        var script = doc.createElement('script');
-        script.textContent = details.scriptlets;
-        doc.head.insertBefore(script, doc.head.firstChild);
-        return true;
     };
 
     api.toSelfie = function() {
