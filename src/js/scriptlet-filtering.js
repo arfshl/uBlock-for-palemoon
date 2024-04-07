@@ -23,29 +23,123 @@
 
 /******************************************************************************/
 
-µBlock.scriptletFilteringEngine = (function() {
-    var api = {};
+µBlock.scriptletFilteringEngine = (( ) => {
+    const api = {},
 
-    var µb = µBlock,
-        scriptletDB = new µb.staticExtFilteringEngine.HostnameBasedDB(),
+        µb = µBlock,
         duplicates = new Set(),
-        acceptedCount = 0,
-        discardedCount = 0,
         scriptletCache = new µb.MRUCache(32),
         exceptionsRegister = new Set(),
-        scriptletsRegister = new Map(),
-        reEscapeScriptArg = /[\\'"]/g;
+        scriptletsRegister = new Map();
+
+    let scriptletDB = new µb.staticExtFilteringEngine.HostnameBasedDB(),
+        acceptedCount = 0,
+        discardedCount = 0;
+
+    const ArgListParser = new class {
+        constructor(separatorChar = ',', mustQuote = false) {
+            this.separatorChar = this.actualSeparatorChar = separatorChar;
+            this.separatorCode = this.actualSeparatorCode = separatorChar.charCodeAt(0);
+            this.mustQuote = mustQuote;
+            this.quoteBeg = 0; this.quoteEnd = 0;
+            this.argBeg = 0; this.argEnd = 0;
+            this.separatorBeg = 0; this.separatorEnd = 0;
+            this.transform = false;
+            this.failed = false;
+            this.reWhitespaceStart = /^\s+/;
+            this.reWhitespaceEnd = /\s+$/;
+            this.reOddTrailingEscape = /(?:^|[^\\])(?:\\\\)*\\$/;
+            this.reTrailingEscapeChars = /\\+$/;
+        }
+        nextArg(pattern, beg = 0) {
+            const len = pattern.length;
+            this.quoteBeg = beg + this.leftWhitespaceCount(pattern.slice(beg));
+            this.failed = false;
+            const qc = pattern.charCodeAt(this.quoteBeg);
+            if ( qc === 0x22 /* " */ || qc === 0x27 /* ' */ || qc === 0x60 /* ` */ ) {
+                this.indexOfNextArgSeparator(pattern, qc);
+                if ( this.argEnd !== len ) {
+                    this.quoteEnd = this.argEnd + 1;
+                    this.separatorBeg = this.separatorEnd = this.quoteEnd;
+                    this.separatorEnd += this.leftWhitespaceCount(pattern.slice(this.quoteEnd));
+                    if ( this.separatorEnd === len ) { return this; }
+                    if ( pattern.charCodeAt(this.separatorEnd) === this.separatorCode ) {
+                        this.separatorEnd += 1;
+                        return this;
+                    }
+                }
+            }
+            this.indexOfNextArgSeparator(pattern, this.separatorCode);
+            this.separatorBeg = this.separatorEnd = this.argEnd;
+            if ( this.separatorBeg < len ) {
+                this.separatorEnd += 1;
+            }
+            this.argEnd -= this.rightWhitespaceCount(pattern.slice(0, this.separatorBeg));
+            this.quoteEnd = this.argEnd;
+            if ( this.mustQuote ) {
+                this.failed = true;
+            }
+            return this;
+        }
+        normalizeArg(s, char = '') {
+            if ( char === '' ) { char = this.actualSeparatorChar; }
+            let out = '';
+            let pos = 0;
+            while ( (pos = s.lastIndexOf(char)) !== -1 ) {
+                out = s.slice(pos) + out;
+                s = s.slice(0, pos);
+                const match = this.reTrailingEscapeChars.exec(s);
+                if ( match === null ) { continue; }
+                const tail = (match[0].length & 1) !== 0
+                    ? match[0].slice(0, -1)
+                    : match[0];
+                out = tail + out;
+                s = s.slice(0, -match[0].length);
+            }
+            if ( out === '' ) { return s; }
+            return s + out;
+        }
+        leftWhitespaceCount(s) {
+            const match = this.reWhitespaceStart.exec(s);
+            return match === null ? 0 : match[0].length;
+        }
+        rightWhitespaceCount(s) {
+            const match = this.reWhitespaceEnd.exec(s);
+            return match === null ? 0 : match[0].length;
+        }
+        indexOfNextArgSeparator(pattern, separatorCode) {
+            this.argBeg = this.argEnd = separatorCode !== this.separatorCode
+                ? this.quoteBeg + 1
+                : this.quoteBeg;
+            this.transform = false;
+            if ( separatorCode !== this.actualSeparatorCode ) {
+                this.actualSeparatorCode = separatorCode;
+                this.actualSeparatorChar = String.fromCharCode(separatorCode);
+            }
+            while ( this.argEnd < pattern.length ) {
+                const pos = pattern.indexOf(this.actualSeparatorChar, this.argEnd);
+                if ( pos === -1 ) {
+                    return (this.argEnd = pattern.length);
+                }
+                if ( this.reOddTrailingEscape.test(pattern.slice(0, pos)) === false ) {
+                    return (this.argEnd = pos);
+                }
+                this.transform = true;
+                this.argEnd = pos + 1;
+            }
+        }
+    }();
 
 
-    var lookupScriptlet = function(raw, reng, toInject) {
+    const lookupScriptlet = (raw, reng, toInject) => {
         if ( toInject.has(raw) ) { return; }
         if ( scriptletCache.resetTime < reng.modifyTime ) {
             scriptletCache.reset();
         }
-        var content = scriptletCache.lookup(raw);
+        let content = scriptletCache.lookup(raw);
         if ( content === undefined ) {
-            var token, args,
-                pos = raw.indexOf(',');
+            let token, args;
+            const pos = raw.indexOf(',');
             if ( pos === -1 ) {
                 token = raw;
             } else {
@@ -57,10 +151,21 @@
             }
             content = reng.resourceContentFromName(token, 'application/javascript');
             if ( !content ) { return; }
+            const argList = [];
             if ( args ) {
-                content = patchScriptlet(content, args);
-                if ( !content ) { return; }
+                let i = 0;
+                const argsEnd = args.length;
+                do {
+                    const details = ArgListParser.nextArg(args, i);
+                    let arg = args.slice(details.argBeg, details.argEnd);
+                    if ( details.transform ) {
+                        arg = ArgListParser.normalizeArg(arg);
+                    }
+                    argList.push(arg);
+                    i = details.separatorEnd;
+                } while ( i < argsEnd )
             }
+            content = patchScriptlet(content, argList);
             content =
                 'try {\n' +
                     content + '\n' +
@@ -70,24 +175,20 @@
         toInject.set(raw, content);
     };
 
-    // Fill template placeholders. Return falsy if:
-    // - At least one argument contains anything else than /\w/ and `.`
-
-    var patchScriptlet = function(content, args) {
-        var i = 1,
-            pos, arg;
-        while ( args !== '' ) {
-            pos = args.indexOf(',');
-            if ( pos === -1 ) { pos = args.length; }
-            arg = args.slice(0, pos).trim().replace(reEscapeScriptArg, '\\$&');
-            content = content.replace('{{' + i + '}}', arg);
-            args = args.slice(pos + 1).trim();
-            i++;
+    // Fill-in scriptlet argument placeholders.
+    const patchScriptlet = (content, argList) => {
+        if ( content.startsWith('function') && content.endsWith('}') ) {
+            content = `(${content})({{args}});`;
         }
-        return content;
+        for ( let i = 0; i < argList.length; i++ ) {
+            content = content.replace(`{{${i+1}}}`, argList[i]);
+        }
+        return content.replace('{{args}}',
+            JSON.stringify(argList).slice(1,-1).replace(/\$/g, '$$$')
+        );
     };
 
-    var logOne = function(isException, token, details) {
+    const logOne = (isException, token, details) => {
         µb.logger.writeOne(
             details.tabId,
             'cosmetic',
