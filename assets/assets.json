@@ -389,7 +389,7 @@
 		"content": "filters",
 		"group": "social",
 		"off": true,
-		"title": "uBlock filters – Annoyances (Cookies Notices + Other)",
+		"title": "uBlock filters – Annoyances",
 		"contentURL": "https://ublockorigin.github.io/uAssets/filters/annoyances.txt",
 		"supportURL": "https://github.com/uBlockOrigin/uAssets"
 	},
